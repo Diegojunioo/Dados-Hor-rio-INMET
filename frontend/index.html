@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<title>Clima Horário Brasil</title>
+
+<!-- Leaflet -->
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+
+<!-- Geocoder -->
+<link rel="stylesheet" href="https://unpkg.com/leaflet-control-geocoder/dist/Control.Geocoder.css"/>
+
+<style>
+  html, body {
+    margin: 0;
+    padding: 0;
+    height: 100%;
+    font-family: Arial, sans-serif;
+  }
+
+  #map {
+    width: 100%;
+    height: 100%;
+  }
+
+  #legenda {
+    position: fixed;
+    bottom: 15px;
+    left: 15px;
+    background: rgba(0, 0, 0, 0.85);
+    color: #fff;
+    padding: 12px 14px;
+    border-radius: 8px;
+    font-size: 13px;
+    line-height: 1.5;
+    max-width: 300px;
+    z-index: 9999;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.4);
+  }
+
+  #legenda a:hover {
+    text-decoration: underline;
+  }
+
+  #legenda hr {
+    border: 0;
+    border-top: 1px solid rgba(255,255,255,0.25);
+    margin: 8px 0;
+  }
+
+  .leaflet-popup-content {
+    font-size: 14px;
+  }
+
+  .leaflet-popup-content small {
+    color: #666;
+  }
+</style>
+</head>
+
+<body>
+
+<div id="map"></div>
+<div id="legenda">⏳ Carregando informações...</div>
+
+<!-- Leaflet -->
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+<!-- Geocoder -->
+<script src="https://unpkg.com/leaflet-control-geocoder/dist/Control.Geocoder.js"></script>
+
+<script>
+/* 🌍 MAPA */
+const map = L.map("map", { zoomControl: false }).setView([-15.78, -47.93], 5);
+
+L.control.zoom({ position: "topleft" }).addTo(map);
+
+L.Control.geocoder({
+  position: "topleft",
+  placeholder: "Buscar cidade...",
+  errorMessage: "Cidade não encontrada",
+  defaultMarkGeocode: true,
+  expand: "click"
+}).addTo(map);
+
+L.tileLayer(
+  "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
+  { maxZoom: 19 }
+).addTo(map);
+
+L.tileLayer(
+  "https://services.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}",
+  { maxZoom: 19 }
+).addTo(map);
+
+/* 🔗 API */
+const API_URL = "http://127.0.0.1:5000/api/clima";
+
+/* 🧹 CAMADA DE ESTAÇÕES */
+const layerEstacoes = L.layerGroup().addTo(map);
+
+/* 🌡️ COR POR TEMPERATURA */
+function corTemperatura(temp) {
+  if (temp === null || temp === undefined) return "#9e9e9e";
+  if (temp <= 10) return "#2196f3";
+  if (temp <= 20) return "#4caf50";
+  if (temp <= 30) return "#ff9800";
+  return "#f44336";
+}
+
+/* 🔧 FORMATA DATA */
+function formatarDataBR(dataStr) {
+  if (!dataStr) return "—";
+  const partes = dataStr.split(" ");
+  if (partes.length !== 2) return dataStr;
+  const [ano, mes, dia] = partes[0].split("-");
+  const hora = partes[1];
+  return `${dia}/${mes}/${ano} ${hora.substring(0,2)}:${hora.substring(2,4)}`;
+}
+
+function formatarDataHoraBR_UTC(data, hora) {
+  if (!data) return "—";
+  const [ano, mes, dia] = data.split("-");
+  if (hora && hora.length === 4) {
+    hora = hora.substring(0,2) + ":" + hora.substring(2,4);
+  }
+  return `${dia}/${mes}/${ano} ${hora || ""} UTC`;
+}
+
+/* 📡 CARREGAR DADOS */
+function carregarDados() {
+
+  fetch(API_URL)
+    .then(res => res.json())
+    .then(payload => {
+
+      const legenda = document.getElementById("legenda");
+      const bounds = [];
+
+      layerEstacoes.clearLayers();
+
+      const validos = payload.dados.filter(d =>
+        typeof d.temperatura === "number"
+      );
+
+      const topQuentes = [...validos].sort((a,b) => b.temperatura - a.temperatura).slice(0,5);
+      const topFrias   = [...validos].sort((a,b) => a.temperatura - b.temperatura).slice(0,5);
+      const topChuva   = payload.dados
+        .filter(d => typeof d.precipitacao === "number" && d.precipitacao > 0)
+        .sort((a,b) => b.precipitacao - a.precipitacao)
+        .slice(0,5);
+
+      legenda.innerHTML = `
+        🕒 <b>Atualização:</b><br>
+        ${formatarDataBR(payload.ultima_atualizacao)} UTC<br><br>
+
+        🌡️ <b>Estações válidas:</b> ${payload.total_estacoes}
+        <hr>
+
+        🔥 <b><a href="http://127.0.0.1:5000/relatorio/diario" target="_blank" style="color:#ff9800;text-decoration:none;">Top 5 mais quentes</a></b><br>
+        ${topQuentes.map((c,i)=>`${i+1}. ${c.nome}/${c.uf} — <b>${c.temperatura}°C</b>`).join("<br>")}
+        <br><br>
+
+        ❄️ <b><a href="http://127.0.0.1:5000/relatorio/diario" target="_blank" style="color:#4fc3f7;text-decoration:none;">Top 5 mais frias</a></b><br>
+        ${topFrias.map((c,i)=>`${i+1}. ${c.nome}/${c.uf} — <b>${c.temperatura}°C</b>`).join("<br>")}
+        <br><br>
+
+        🌧️ <b><a href="http://127.0.0.1:5000/relatorio/diario" target="_blank" style="color:#81c784;text-decoration:none;">Top 5 precipitação</a></b><br>
+        ${topChuva.length ? topChuva.map((c,i)=>`${i+1}. ${c.nome}/${c.uf} — <b>${c.precipitacao} mm</b>`).join("<br>") : "Sem registros"}
+      `;
+
+      payload.dados.forEach(cidade => {
+        if (typeof cidade.lat !== "number" || typeof cidade.lon !== "number") return;
+
+        bounds.push([cidade.lat, cidade.lon]);
+
+        L.circleMarker([cidade.lat, cidade.lon], {
+          radius: 6,
+          fillColor: corTemperatura(cidade.temperatura),
+          color: "#ffffff",
+          weight: 1,
+          fillOpacity: 0.9
+        })
+        .bindPopup(`
+          <b>${cidade.nome} - ${cidade.uf}</b><br>
+          <small>🕒 ${formatarDataHoraBR_UTC(cidade.data, cidade.hora)}</small><br><br>
+          🌡️ Temp. Ins: ${cidade.temperatura} °C<br>
+          🌡️ Temp. Max: ${cidade.temperatura_maxima ?? "N/A"} °C<br>
+          🌡️ Temp. Min: ${cidade.temperatura_minima ?? "N/A"} °C<br>
+          💧 Umidade: ${cidade.umidade ?? "N/A"} %<br>
+          💨 Vento: ${cidade.vento ?? "N/A"} m/s<br>
+          🌧️ Chuva: ${cidade.precipitacao ?? 0} mm<br>
+        `)
+        .bindTooltip(`<b>${cidade.nome}/${cidade.uf}</b>`, {
+          direction: "top",
+          offset: [0, -6],
+          sticky: true,
+          opacity: 0.9
+        })
+        .addTo(layerEstacoes);
+      });
+
+      if (bounds.length) map.fitBounds(bounds);
+
+    })
+    .catch(() => {
+      document.getElementById("legenda").innerHTML = "❌ Erro ao conectar à API";
+    });
+}
+
+/* ▶️ PRIMEIRA CARGA */
+carregarDados();
+
+/* 🔁 ATUALIZA A CADA 10 MINUTOS */
+setInterval(carregarDados, 600000);
+</script>
+
+</body>
+</html>
+<footer>
+  Clima Horário Brasil — Dados climáticos horários em tempo real.
+</footer>
