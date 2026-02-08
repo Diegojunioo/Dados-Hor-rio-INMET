@@ -13,6 +13,21 @@ TOKEN = os.getenv("INMET_TOKEN") or "bEhBU0szRjV4TGhic2E3ZHpndEVTVENrSkN4NjJxZm0
 TIMEOUT = 4
 MAX_ESTACOES = 600
 
+# =====================================================
+# 🏠 ROTA RAIZ — NECESSÁRIA PARA O RENDER
+# =====================================================
+@app.route("/")
+def home():
+    return jsonify({
+        "status": "online",
+        "projeto": "Clima Horário Brasil - INMET",
+        "descricao": "API de dados meteorológicos horários do INMET",
+        "endpoints": {
+            "clima": "/api/clima",
+            "relatorio_diario": "/relatorio/diario"
+        }
+    })
+
 def to_float(v):
     try:
         return float(v)
