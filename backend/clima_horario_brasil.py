@@ -148,7 +148,7 @@ th {{ background:#eee; }}
 </head>
 <body>
 <div class="container">
-<h1>📊 Relatório Diário – Extremos por Horário</h1>
+<h1>📊 Relatório Diário Extremos</h1>
 <p style="text-align:center; font-size:16px;">📅 {hoje}</p>
 
 <div class="section top-quente">
