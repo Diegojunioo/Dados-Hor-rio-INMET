@@ -1,5 +1,4 @@
-from flask import send_from_directory
-from flask import Flask, jsonify, Response
+from flask import send_from_directory, Flask, jsonify, Response
 from flask_cors import CORS
 import requests
 import os
@@ -14,9 +13,6 @@ TOKEN = os.getenv("INMET_TOKEN") or "bEhBU0szRjV4TGhic2E3ZHpndEVTVENrSkN4NjJxZm0
 TIMEOUT = 4
 MAX_ESTACOES = 600
 
-# =====================================================
-# 🏠 ROTA RAIZ — NECESSÁRIA PARA O RENDER
-# =====================================================
 @app.route("/")
 def home():
     return send_from_directory("static", "mapa.html")
@@ -31,18 +27,12 @@ def buscar_horarios_disponiveis():
     agora = time.gmtime()
     data = time.strftime("%Y-%m-%d", agora)
     hora_atual = int(time.strftime("%H", agora))
-
-    horarios = []
-    for h in range(hora_atual + 1):
-        horarios.append(f"{h:02d}00")
-
-    return data, horarios
+    return data, [f"{h:02d}00" for h in range(hora_atual + 1)]
 
 @app.route("/api/clima")
 def api_clima():
     data, horarios = buscar_horarios_disponiveis()
     hora = horarios[-1]
-
     url = f"https://apitempo.inmet.gov.br/token/estacao/dados/{data}/{hora}/{TOKEN}"
 
     try:
@@ -51,7 +41,6 @@ def api_clima():
         return jsonify({"dados": []})
 
     resultado = []
-
     for e in estacoes[:MAX_ESTACOES]:
         lat = to_float(e.get("VL_LATITUDE"))
         lon = to_float(e.get("VL_LONGITUDE"))
@@ -81,45 +70,61 @@ def api_clima():
         "dados": resultado
     })
 
-# 📄 RELATÓRIO DIÁRIO COM TODOS OS HORÁRIOS
+
 @app.route("/relatorio/diario")
 def relatorio_diario():
-
     data, horarios = buscar_horarios_disponiveis()
 
     registros_temp_max = []
     registros_temp_min = []
     registros_chuva = []
 
+    # Coleta os dados de todos os horários
     for hora in horarios:
         url = f"https://apitempo.inmet.gov.br/token/estacao/dados/{data}/{hora}/{TOKEN}"
-
         try:
             estacoes = requests.get(url, timeout=TIMEOUT).json()
         except:
             continue
 
         for e in estacoes[:MAX_ESTACOES]:
-            temp = to_float(e.get("TEM_INS"))
+            temp_max = to_float(e.get("TEM_MAX"))
+            temp_min = to_float(e.get("TEM_MIN"))
             chuva = to_float(e.get("CHUVA"))
 
-            if temp is not None:
-                registros_temp_max.append((hora, e.get("DC_NOME"), e.get("UF"), temp))
-                registros_temp_min.append((hora, e.get("DC_NOME"), e.get("UF"), temp))
+            chave = f"{e.get('DC_NOME')}/{e.get('UF')}"
 
-            if chuva and chuva > 0:
-                registros_chuva.append((hora, e.get("DC_NOME"), e.get("UF"), chuva))
+            if temp_max is not None:
+                registros_temp_max.append((chave, hora, temp_max))
+            if temp_min is not None:
+                registros_temp_min.append((chave, hora, temp_min))
+            if chuva is not None and chuva > 0:
+                registros_chuva.append((chave, hora, chuva))
 
-    top_quentes = sorted(registros_temp_max, key=lambda x: x[3], reverse=True)[:10]
-    top_frias = sorted(registros_temp_min, key=lambda x: x[3])[:10]
-    top_chuva = sorted(registros_chuva, key=lambda x: x[3], reverse=True)[:10]
+    # Função para manter apenas o maior ou menor valor por estação
+    def extremos_por_estacao(registros, maior=True):
+        d = {}
+        for chave, hora, valor in registros:
+            if chave not in d:
+                d[chave] = (hora, valor)
+            else:
+                if maior and valor > d[chave][1]:
+                    d[chave] = (hora, valor)
+                elif not maior and valor < d[chave][1]:
+                    d[chave] = (hora, valor)
+        return [(hora, chave.split("/")[0], chave.split("/")[1], valor) for chave, (hora, valor) in d.items()]
+
+    # Top 10 por ranking
+    top_quentes = sorted(extremos_por_estacao(registros_temp_max, maior=True), key=lambda x: x[3], reverse=True)[:10]
+    top_frias   = sorted(extremos_por_estacao(registros_temp_min, maior=False), key=lambda x: x[3])[:10]
+    top_chuva   = sorted(extremos_por_estacao(registros_chuva, maior=True), key=lambda x: x[3], reverse=True)[:10]
 
     hoje = datetime.utcnow().strftime("%d/%m/%Y")
 
-    def linha(l):
+    def linha(lista):
         return "".join(
             f"<tr><td>{h}</td><td>{c}/{u}</td><td><b>{v}</b></td></tr>"
-            for h, c, u, v in l
+            for h, c, u, v in lista
         )
 
     html = f"""
@@ -129,21 +134,24 @@ def relatorio_diario():
 <meta charset="UTF-8">
 <title>Relatório Diário – Extremos Horários</title>
 <style>
-body {{ font-family: Arial; background:#f4f6f8; padding:20px; }}
-.container {{ background:#fff; max-width:900px; margin:auto; padding:25px; border-radius:8px; }}
-h1 {{ text-align:center; }}
-table {{ width:100%; border-collapse:collapse; margin-top:10px; }}
-th,td {{ padding:8px; border-bottom:1px solid #ddd; }}
+body {{ font-family: Arial; background:#f0f2f5; padding:20px; }}
+.container {{ background:#fff; max-width:950px; margin:auto; padding:25px; border-radius:10px; box-shadow:0 4px 12px rgba(0,0,0,0.1); }}
+h1 {{ text-align:center; color:#333; }}
+table {{ width:100%; border-collapse:collapse; margin-top:10px; font-size:14px; }}
+th,td {{ padding:10px; border-bottom:1px solid #ddd; text-align:center; }}
 th {{ background:#eee; }}
-.section {{ margin-top:30px; }}
+.section {{ margin-top:35px; border-radius:8px; padding:15px; }}
+.top-quente {{ background: #ffe6e6; }}
+.top-frio {{ background: #e6f0ff; }}
+.top-chuva {{ background: #e6ffe6; }}
 </style>
 </head>
 <body>
 <div class="container">
 <h1>📊 Relatório Diário – Extremos por Horário</h1>
-<p style="text-align:center">📅 {hoje}</p>
+<p style="text-align:center; font-size:16px;">📅 {hoje}</p>
 
-<div class="section">
+<div class="section top-quente">
 <h2>🔥 Maiores Temperaturas do Dia</h2>
 <table>
 <tr><th>Hora</th><th>Estação</th><th>°C</th></tr>
@@ -151,7 +159,7 @@ th {{ background:#eee; }}
 </table>
 </div>
 
-<div class="section">
+<div class="section top-frio">
 <h2>❄️ Menores Temperaturas do Dia</h2>
 <table>
 <tr><th>Hora</th><th>Estação</th><th>°C</th></tr>
@@ -159,7 +167,7 @@ th {{ background:#eee; }}
 </table>
 </div>
 
-<div class="section">
+<div class="section top-chuva">
 <h2>🌧️ Maiores Precipitações do Dia</h2>
 <table>
 <tr><th>Hora</th><th>Estação</th><th>mm</th></tr>
@@ -174,8 +182,7 @@ th {{ background:#eee; }}
 
     return Response(html, mimetype="text/html")
 
-if __name__ == "__main__":
-    import os
 
+if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5000))
     app.run(host="0.0.0.0", port=port)
