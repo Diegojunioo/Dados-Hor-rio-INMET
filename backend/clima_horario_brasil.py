@@ -1,3 +1,4 @@
+from flask import send_from_directory
 from flask import Flask, jsonify, Response
 from flask_cors import CORS
 import requests
@@ -5,7 +6,7 @@ import os
 import time
 from datetime import datetime
 
-app = Flask(__name__)
+app = Flask(__name__, static_folder="static")
 CORS(app)
 
 TOKEN = os.getenv("INMET_TOKEN") or "bEhBU0szRjV4TGhic2E3ZHpndEVTVENrSkN4NjJxZm0=lHASK3F5xLhbsa7dzgtESTCkJCx62qfm"
@@ -18,15 +19,7 @@ MAX_ESTACOES = 600
 # =====================================================
 @app.route("/")
 def home():
-    return jsonify({
-        "status": "online",
-        "projeto": "Clima Horário Brasil - INMET",
-        "descricao": "API de dados meteorológicos horários do INMET",
-        "endpoints": {
-            "clima": "/api/clima",
-            "relatorio_diario": "/relatorio/diario"
-        }
-    })
+    return send_from_directory("static", "mapa.html")
 
 def to_float(v):
     try:
