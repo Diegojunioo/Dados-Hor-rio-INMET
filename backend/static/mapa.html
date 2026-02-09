@@ -204,12 +204,10 @@ ${topChuva.length
         .bindPopup(`
 <b>${c.nome} - ${c.uf}</b><br>
 <small>🕒 ${formatarDataHoraBR_UTC(c.data, c.hora)}</small><br><br>
-          🌡️ Temp. Ins: ${cidade.temperatura} °C<br>
-          🌡️ Temp. Max: ${cidade.temperatura_maxima ?? "N/A"} °C<br>
-          🌡️ Temp. Min: ${cidade.temperatura_minima ?? "N/A"} °C<br>
-          💧 Umidade: ${cidade.umidade ?? "N/A"} %<br>
-          💨 Vento: ${cidade.vento ?? "N/A"} m/s<br>
-          🌧️ Chuva: ${cidade.precipitacao ?? 0} mm<br>
+🌡️ Temp: ${c.temperatura} °C<br>
+💧 Umidade: ${c.umidade ?? "N/A"} %<br>
+💨 Vento: ${c.vento ?? "N/A"} m/s<br>
+🌧️ Chuva: ${c.precipitacao ?? 0} mm
 `)
         .bindTooltip(`<b>${c.nome}/${c.uf}</b>`, { sticky: true })
         .addTo(layerEstacoes);
