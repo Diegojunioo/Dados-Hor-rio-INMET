@@ -29,34 +29,55 @@ html, body {
 /* 📌 LEGENDA */
 #legenda {
   position: fixed;
-  bottom: 15px;
-  left: 15px;
+  bottom: 12px;
+  left: 12px;
   background: rgba(0, 0, 0, 0.85);
   color: #fff;
-  padding: 12px 14px;
-  border-radius: 8px;
+  border-radius: 10px;
   font-size: 13px;
-  line-height: 1.5;
   max-width: 300px;
   z-index: 9999;
   box-shadow: 0 2px 8px rgba(0,0,0,0.4);
+  overflow: hidden;
 }
 
-/* 📱 Ajuste legenda no celular */
-@media (max-width: 768px) {
-  #legenda {
-    font-size: 12px;
-    max-width: 90vw;
-    left: 50%;
-    transform: translateX(-50%);
-    bottom: 10px;
-  }
+/* Cabeçalho clicável (mobile) */
+#legenda-header {
+  padding: 10px 12px;
+  font-weight: bold;
+  cursor: pointer;
+  background: rgba(255,255,255,0.08);
+}
+
+/* Conteúdo da legenda */
+#legenda-conteudo {
+  padding: 10px 12px;
 }
 
 #legenda hr {
   border: 0;
   border-top: 1px solid rgba(255,255,255,0.25);
   margin: 8px 0;
+}
+
+/* 📱 Mobile */
+@media (max-width: 768px) {
+  #legenda {
+    left: 50%;
+    transform: translateX(-50%);
+    max-width: 92vw;
+  }
+
+  #legenda.fechada #legenda-conteudo {
+    display: none;
+  }
+}
+
+/* 🖥️ Desktop */
+@media (min-width: 769px) {
+  #legenda-header {
+    display: none;
+  }
 }
 
 /* 🗨️ POPUPS */
@@ -99,7 +120,11 @@ html, body {
 <body>
 
 <div id="map"></div>
-<div id="legenda">⏳ Carregando informações...</div>
+
+<div id="legenda" class="fechada">
+  <div id="legenda-header">📊 Informações do Clima (toque para abrir)</div>
+  <div id="legenda-conteudo">⏳ Carregando informações...</div>
+</div>
 
 <!-- Leaflet -->
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
@@ -111,7 +136,7 @@ html, body {
 /* 🌍 MAPA */
 const map = L.map("map", { zoomControl: false }).setView([-15.78, -47.93], 5);
 
-/* 📱 Zoom melhor para toque */
+/* 📱 Zoom confortável */
 L.control.zoom({ position: "bottomright" }).addTo(map);
 
 /* 🔍 Busca por cidade */
@@ -175,7 +200,7 @@ function carregarDados() {
     .then(r => r.json())
     .then(payload => {
 
-      const legenda = document.getElementById("legenda");
+      const legendaConteudo = document.getElementById("legenda-conteudo");
       const bounds = [];
       layerEstacoes.clearLayers();
 
@@ -188,7 +213,7 @@ function carregarDados() {
         .sort((a,b)=>b.precipitacao-a.precipitacao)
         .slice(0,5);
 
-      legenda.innerHTML = `
+      legendaConteudo.innerHTML = `
 🕒 <b>Atualização:</b><br>
 ${formatarDataBR(payload.ultima_atualizacao)} UTC<br><br>
 
@@ -236,11 +261,23 @@ ${topChuva.length
 
       if (bounds.length) map.fitBounds(bounds);
     })
-    .catch(() => document.getElementById("legenda").innerHTML = "❌ Erro ao conectar à API");
+    .catch(() => {
+      document.getElementById("legenda-conteudo").innerHTML = "❌ Erro ao conectar à API";
+    });
 }
 
 carregarDados();
 setInterval(carregarDados, 600000);
+
+/* 🖐️ Toggle legenda no mobile */
+const legenda = document.getElementById("legenda");
+const headerLegenda = document.getElementById("legenda-header");
+
+if (headerLegenda) {
+  headerLegenda.addEventListener("click", () => {
+    legenda.classList.toggle("fechada");
+  });
+}
 </script>
 
 </body>
