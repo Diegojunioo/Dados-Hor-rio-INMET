@@ -204,7 +204,9 @@ ${topChuva.length
         .bindPopup(`
 <b>${c.nome} - ${c.uf}</b><br>
 <small>🕒 ${formatarDataHoraBR_UTC(c.data, c.hora)}</small><br><br>
-🌡️ Temp: ${c.temperatura} °C<br>
+🌡️ Temp Atual: ${c.temperatura} °C<br>
+🌡️ Temp Máx: ${c.temperatura_maxima ?? "N/A"} °C<br>
+🌡️ Temp Min: ${c.temperatura_minima ?? "N/A"} °C<br>
 💧 Umidade: ${c.umidade ?? "N/A"} %<br>
 💨 Vento: ${c.vento ?? "N/A"} m/s<br>
 🌧️ Chuva: ${c.precipitacao ?? 0} mm
