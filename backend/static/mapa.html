@@ -4,6 +4,9 @@
 <meta charset="UTF-8">
 <title>Clima Horário Brasil</title>
 
+<!-- 📱 MOBILE -->
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
 <!-- Leaflet -->
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
 
@@ -11,71 +14,85 @@
 <link rel="stylesheet" href="https://unpkg.com/leaflet-control-geocoder/dist/Control.Geocoder.css"/>
 
 <style>
-  html, body {
-    margin: 0;
-    padding: 0;
-    height: 100%;
-    font-family: Arial, sans-serif;
-  }
+html, body {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+  font-family: Arial, sans-serif;
+}
 
-  #map {
-    width: 100%;
-    height: 100%;
-  }
+#map {
+  width: 100vw;
+  height: 100vh;
+}
 
+/* 📌 LEGENDA */
+#legenda {
+  position: fixed;
+  bottom: 15px;
+  left: 15px;
+  background: rgba(0, 0, 0, 0.85);
+  color: #fff;
+  padding: 12px 14px;
+  border-radius: 8px;
+  font-size: 13px;
+  line-height: 1.5;
+  max-width: 300px;
+  z-index: 9999;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.4);
+}
+
+/* 📱 Ajuste legenda no celular */
+@media (max-width: 768px) {
   #legenda {
-    position: fixed;
-    bottom: 15px;
-    left: 15px;
-    background: rgba(0, 0, 0, 0.85);
-    color: #fff;
-    padding: 12px 14px;
-    border-radius: 8px;
-    font-size: 13px;
-    line-height: 1.5;
-    max-width: 300px;
-    z-index: 9999;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.4);
+    font-size: 12px;
+    max-width: 90vw;
+    left: 50%;
+    transform: translateX(-50%);
+    bottom: 10px;
   }
+}
 
-  #legenda hr {
-    border: 0;
-    border-top: 1px solid rgba(255,255,255,0.25);
-    margin: 8px 0;
-  }
+#legenda hr {
+  border: 0;
+  border-top: 1px solid rgba(255,255,255,0.25);
+  margin: 8px 0;
+}
 
-  .leaflet-popup-content {
-    font-size: 14px;
-  }
+/* 🗨️ POPUPS */
+.leaflet-popup-content {
+  font-size: 14px;
+  line-height: 1.4;
+}
 
-  .leaflet-popup-content small {
-    color: #666;
-  }
+.leaflet-popup-content small {
+  color: #666;
+}
 
-  /* Links da legenda */
-  .link-quente {
-    color: #ff9800;
-    text-decoration: none;
-    font-weight: bold;
-  }
+/* 🔗 LINKS */
+.link-quente {
+  color: #ff9800;
+  font-weight: bold;
+  text-decoration: none;
+}
 
-  .link-frio {
-    color: #4fc3f7;
-    text-decoration: none;
-    font-weight: bold;
-  }
+.link-frio {
+  color: #4fc3f7;
+  font-weight: bold;
+  text-decoration: none;
+}
 
-  .link-chuva {
-    color: #81c784;
-    text-decoration: none;
-    font-weight: bold;
-  }
+.link-chuva {
+  color: #81c784;
+  font-weight: bold;
+  text-decoration: none;
+}
 
-  .link-quente:hover,
-  .link-frio:hover,
-  .link-chuva:hover {
-    text-decoration: underline;
-  }
+.link-quente:hover,
+.link-frio:hover,
+.link-chuva:hover {
+  text-decoration: underline;
+}
 </style>
 </head>
 
@@ -94,16 +111,19 @@
 /* 🌍 MAPA */
 const map = L.map("map", { zoomControl: false }).setView([-15.78, -47.93], 5);
 
-L.control.zoom({ position: "topleft" }).addTo(map);
+/* 📱 Zoom melhor para toque */
+L.control.zoom({ position: "bottomright" }).addTo(map);
 
+/* 🔍 Busca por cidade */
 L.Control.geocoder({
-  position: "topleft",
+  position: "topright",
   placeholder: "Buscar cidade...",
   errorMessage: "Cidade não encontrada",
   defaultMarkGeocode: true,
   expand: "click"
 }).addTo(map);
 
+/* 🗺️ CAMADAS */
 L.tileLayer(
   "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
   { maxZoom: 19 }
@@ -113,6 +133,11 @@ L.tileLayer(
   "https://services.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}",
   { maxZoom: 19 }
 ).addTo(map);
+
+/* 📱 Evita conflito de scroll no celular */
+if (window.innerWidth < 768) {
+  map.scrollWheelZoom.disable();
+}
 
 /* 🔗 API */
 const API_URL = "/api/clima";
@@ -170,21 +195,15 @@ ${formatarDataBR(payload.ultima_atualizacao)} UTC<br><br>
 🌡️ <b>Estações válidas:</b> ${payload.total_estacoes}
 <hr>
 
-🔥 <a href="/relatorio/diario" target="_blank" class="link-quente">
-Top 5 mais quentes
-</a><br>
+🔥 <a href="/relatorio/diario" target="_blank" class="link-quente">Top 5 mais quentes</a><br>
 ${topQuentes.map((c,i)=>`${i+1}. ${c.nome}/${c.uf} — <b>${c.temperatura}°C</b>`).join("<br>")}
 <br><br>
 
-❄️ <a href="/relatorio/diario" target="_blank" class="link-frio">
-Top 5 mais frias
-</a><br>
+❄️ <a href="/relatorio/diario" target="_blank" class="link-frio">Top 5 mais frias</a><br>
 ${topFrias.map((c,i)=>`${i+1}. ${c.nome}/${c.uf} — <b>${c.temperatura}°C</b>`).join("<br>")}
 <br><br>
 
-🌧️ <a href="/relatorio/diario" target="_blank" class="link-chuva">
-Top 5 precipitação
-</a><br>
+🌧️ <a href="/relatorio/diario" target="_blank" class="link-chuva">Top 5 precipitação</a><br>
 ${topChuva.length
   ? topChuva.map((c,i)=>`${i+1}. ${c.nome}/${c.uf} — <b>${c.precipitacao} mm</b>`).join("<br>")
   : "Sem registros"}
@@ -217,7 +236,7 @@ ${topChuva.length
 
       if (bounds.length) map.fitBounds(bounds);
     })
-    .catch(() => legenda.innerHTML = "❌ Erro ao conectar à API");
+    .catch(() => document.getElementById("legenda").innerHTML = "❌ Erro ao conectar à API");
 }
 
 carregarDados();
