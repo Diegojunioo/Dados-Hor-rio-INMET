@@ -18,6 +18,37 @@
     font-family: Arial, sans-serif;
   }
 
+  .link-extremos {
+  display: inline-block;
+  margin-top: 6px;
+  color: #ffffff;   
+  font-weight: bold;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.link-extremos:hover {
+  opacity: 0.8;
+}
+
+.link-quente {
+  color: #ff9800;
+  font-weight: bold;
+  text-decoration: none;
+}
+
+.link-frio {
+  color: #4fc3f7;
+  font-weight: bold;
+  text-decoration: none;
+}
+
+.link-chuva {
+  color: #81c784;
+  font-weight: bold;
+  text-decoration: none;
+}
+
   #map {
     width: 100%;
     height: 100%;
@@ -152,22 +183,28 @@ function carregarDados() {
 
       legenda.innerHTML = `
         🕒 <b>Atualização:</b><br>
-        ${formatarDataBR(payload.ultima_atualizacao)} UTC<br><br>
+${formatarDataBR(payload.ultima_atualizacao)} UTC<br><br>
 
-        🌡️ <b>Estações válidas:</b> ${payload.total_estacoes}
-        <hr>
+🌡️ <b>Estações válidas:</b> ${payload.total_estacoes}<hr>
+📊 <a href="/relatorio/diario" target="_blank" class="link-extremos">
+<b>EXTREMOS DIÁRIO</b>
+</a>
 
-        🔥 <b><a href="http://127.0.0.1:5000/relatorio/diario" target="_blank" style="color:#ff9800;text-decoration:none;">Top 5 mais quentes</a></b><br>
-        ${topQuentes.map((c,i)=>`${i+1}. ${c.nome}/${c.uf} — <b>${c.temperatura}°C</b>`).join("<br>")}
-        <br><br>
+<hr>
 
-        ❄️ <b><a href="http://127.0.0.1:5000/relatorio/diario" target="_blank" style="color:#4fc3f7;text-decoration:none;">Top 5 mais frias</a></b><br>
-        ${topFrias.map((c,i)=>`${i+1}. ${c.nome}/${c.uf} — <b>${c.temperatura}°C</b>`).join("<br>")}
-        <br><br>
+🔥 <b class="link-quente">Top 5 mais quentes</b><br>
+${topQuentes.map((c,i)=>`${i+1}. ${c.nome}/${c.uf} — <b>${c.temperatura}°C</b>`).join("<br>")}
+<br><br>
 
-        🌧️ <b><a href="http://127.0.0.1:5000/relatorio/diario" target="_blank" style="color:#81c784;text-decoration:none;">Top 5 precipitação</a></b><br>
-        ${topChuva.length ? topChuva.map((c,i)=>`${i+1}. ${c.nome}/${c.uf} — <b>${c.precipitacao} mm</b>`).join("<br>") : "Sem registros"}
-      `;
+❄️ <b class="link-frio">Top 5 mais frias</b><br>
+${topFrias.map((c,i)=>`${i+1}. ${c.nome}/${c.uf} — <b>${c.temperatura}°C</b>`).join("<br>")}
+<br><br>
+
+🌧️ <b class="link-chuva">Top 5 precipitação</b><br>
+${topChuva.length
+  ? topChuva.map((c,i)=>`${i+1}. ${c.nome}/${c.uf} — <b>${c.precipitacao} mm</b>`).join("<br>")
+  : "Sem registros"}
+`;
 
       payload.dados.forEach(cidade => {
         if (typeof cidade.lat !== "number" || typeof cidade.lon !== "number") return;
