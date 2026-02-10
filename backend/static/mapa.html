@@ -91,6 +91,18 @@ html, body {
 }
 
 /* 🔗 LINKS */
+.link-extremos {
+  display: inline-block;
+  margin-top: 6px;
+  color: #ffffff;   
+  font-weight: bold;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.link-extremos:hover {
+  opacity: 0.8;
+}
 .link-quente {
   color: #ff9800;
   font-weight: bold;
@@ -122,7 +134,7 @@ html, body {
 <div id="map"></div>
 
 <div id="legenda" class="fechada">
-  <div id="legenda-header">📊 Informações do Clima (toque para abrir)</div>
+  <div id="legenda-header">📊 Top 05 Horario</div>
   <div id="legenda-conteudo">⏳ Carregando informações...</div>
 </div>
 
@@ -217,18 +229,22 @@ function carregarDados() {
 🕒 <b>Atualização:</b><br>
 ${formatarDataBR(payload.ultima_atualizacao)} UTC<br><br>
 
-🌡️ <b>Estações válidas:</b> ${payload.total_estacoes}
+🌡️ <b>Estações válidas:</b> ${payload.total_estacoes}<hr>
+📊 <a href="/relatorio/diario" target="_blank" class="link-extremos">
+<b>EXTREMOS DIÁRIO</b>
+</a>
+
 <hr>
 
-🔥 <a href="/relatorio/diario" target="_blank" class="link-quente">Top 5 mais quentes</a><br>
+🔥 <b class="link-quente">Top 5 mais quentes</b><br>
 ${topQuentes.map((c,i)=>`${i+1}. ${c.nome}/${c.uf} — <b>${c.temperatura}°C</b>`).join("<br>")}
 <br><br>
 
-❄️ <a href="/relatorio/diario" target="_blank" class="link-frio">Top 5 mais frias</a><br>
+❄️ <b class="link-frio">Top 5 mais frias</b><br>
 ${topFrias.map((c,i)=>`${i+1}. ${c.nome}/${c.uf} — <b>${c.temperatura}°C</b>`).join("<br>")}
 <br><br>
 
-🌧️ <a href="/relatorio/diario" target="_blank" class="link-chuva">Top 5 precipitação</a><br>
+🌧️ <b class="link-chuva">Top 5 precipitação</b><br>
 ${topChuva.length
   ? topChuva.map((c,i)=>`${i+1}. ${c.nome}/${c.uf} — <b>${c.precipitacao} mm</b>`).join("<br>")
   : "Sem registros"}
