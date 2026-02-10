@@ -90,32 +90,28 @@ html, body {
   color: #666;
 }
 
-/* 🔗 LINKS / TÍTULOS */
+/* 🔗 LINKS */
 .link-quente {
   color: #ff9800;
   font-weight: bold;
+  text-decoration: none;
 }
 
 .link-frio {
   color: #4fc3f7;
   font-weight: bold;
+  text-decoration: none;
 }
 
 .link-chuva {
   color: #81c784;
   font-weight: bold;
-}
-
-/* 📊 LINK PRINCIPAL */
-.link-extremos {
-  display: inline-block;
-  margin-top: 4px;
-  color: #00bcd4;
-  font-weight: bold;
   text-decoration: none;
 }
 
-.link-extremos:hover {
+.link-quente:hover,
+.link-frio:hover,
+.link-chuva:hover {
   text-decoration: underline;
 }
 </style>
@@ -222,7 +218,9 @@ function carregarDados() {
 ${formatarDataBR(payload.ultima_atualizacao)} UTC<br><br>
 
 🌡️ <b>Estações válidas:</b> ${payload.total_estacoes}<br>
-📊 <a href="/relatorio/diario" target="_blank" class="link-extremos"><b>EXTREMOS DIÁRIO</b></a>
+📊 <a href="/relatorio/diario" target="_blank" class="link-extremos">
+<b>EXTREMOS DIÁRIO</b>
+</a>
 
 <hr>
 
@@ -239,11 +237,51 @@ ${topChuva.length
   ? topChuva.map((c,i)=>`${i+1}. ${c.nome}/${c.uf} — <b>${c.precipitacao} mm</b>`).join("<br>")
   : "Sem registros"}
 `;
+
+      payload.dados.forEach(c => {
+        if (!c.lat || !c.lon) return;
+        bounds.push([c.lat, c.lon]);
+
+        L.circleMarker([c.lat, c.lon], {
+          radius: 6,
+          fillColor: corTemperatura(c.temperatura),
+          color: "#fff",
+          weight: 1,
+          fillOpacity: 0.9
+        })
+        .bindPopup(`
+<b>${c.nome} - ${c.uf}</b><br>
+<small>🕒 ${formatarDataHoraBR_UTC(c.data, c.hora)}</small><br><br>
+🌡️ Temp Atual: ${c.temperatura} °C<br>
+🌡️ Temp Máx: ${c.temperatura_maxima ?? "N/A"} °C<br>
+🌡️ Temp Min: ${c.temperatura_minima ?? "N/A"} °C<br>
+💧 Umidade: ${c.umidade ?? "N/A"} %<br>
+💨 Vento: ${c.vento ?? "N/A"} m/s<br>
+🌧️ Chuva: ${c.precipitacao ?? 0} mm
+`)
+        .bindTooltip(`<b>${c.nome}/${c.uf}</b>`, { sticky: true })
+        .addTo(layerEstacoes);
+      });
+
+      if (bounds.length) map.fitBounds(bounds);
+    })
+    .catch(() => {
+      document.getElementById("legenda-conteudo").innerHTML = "❌ Erro ao conectar à API";
     });
 }
 
 carregarDados();
 setInterval(carregarDados, 600000);
+
+/* 🖐️ Toggle legenda no mobile */
+const legenda = document.getElementById("legenda");
+const headerLegenda = document.getElementById("legenda-header");
+
+if (headerLegenda) {
+  headerLegenda.addEventListener("click", () => {
+    legenda.classList.toggle("fechada");
+  });
+}
 </script>
 
 </body>
