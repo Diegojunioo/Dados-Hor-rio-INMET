@@ -229,7 +229,8 @@ function carregarDados() {
 🕒 <b>Atualização:</b><br>
 ${formatarDataBR(payload.ultima_atualizacao)} UTC<br><br>
 
-🌡️ <b>Estações válidas:</b> ${payload.total_estacoes}<hr>
+🌡️ <b>Estações válidas:</b> ${payload.total_estacoes}
+
 📊 <a href="/relatorio/diario" target="_blank" class="link-extremos">
 <b>EXTREMOS DIÁRIO</b>
 </a>
@@ -294,6 +295,19 @@ if (headerLegenda) {
     legenda.classList.toggle("fechada");
   });
 }
+
+/* 🤏 Recolher legenda automaticamente ao mover o mapa (MOBILE ONLY) */
+function recolherLegendaMobile() {
+  if (window.innerWidth <= 768 && !legenda.classList.contains("fechada")) {
+    legenda.classList.add("fechada");
+  }
+}
+
+// Arrastar mapa
+map.on("movestart", recolherLegendaMobile);
+
+// Zoom (botão ou gesto)
+map.on("zoomstart", recolherLegendaMobile);
 </script>
 
 </body>
