@@ -217,22 +217,22 @@ function carregarDados() {
 🕒 <b>Atualização:</b><br>
 ${formatarDataBR(payload.ultima_atualizacao)} UTC<br><br>
 
-🌡️ <b>Estações válidas:</b> ${payload.total_estacoes}<hr>
+🌡️ <b>Estações válidas:</b> ${payload.total_estacoes}<br>
 📊 <a href="/relatorio/diario" target="_blank" class="link-extremos">
 <b>EXTREMOS DIÁRIO</b>
 </a>
 
 <hr>
 
-🔥 Top 5 mais quentes</a><br>
+🔥 <b class="link-quente">Top 5 mais quentes</b><br>
 ${topQuentes.map((c,i)=>`${i+1}. ${c.nome}/${c.uf} — <b>${c.temperatura}°C</b>`).join("<br>")}
 <br><br>
 
-❄️ Top 5 mais frias</a><br>
+❄️ <b class="link-frio">Top 5 mais frias</b><br>
 ${topFrias.map((c,i)=>`${i+1}. ${c.nome}/${c.uf} — <b>${c.temperatura}°C</b>`).join("<br>")}
 <br><br>
 
-🌧️ Top 5 precipitação</a><br>
+🌧️ <b class="link-chuva">Top 5 precipitação</b><br>
 ${topChuva.length
   ? topChuva.map((c,i)=>`${i+1}. ${c.nome}/${c.uf} — <b>${c.precipitacao} mm</b>`).join("<br>")
   : "Sem registros"}
