@@ -186,7 +186,7 @@ function carregarDados() {
 ${formatarDataBR(payload.ultima_atualizacao)} UTC<br><br>
 
 🌡️ <b>Estações válidas:</b> ${payload.total_estacoes}<hr>
-📊 <a href="/relatorio/diario" target="_blank" class="link-extremos">
+📊 <a href="http://127.0.0.1:5000/relatorio/diario" target="_blank" class="link-extremos">
 <b>EXTREMOS DIÁRIO</b>
 </a>
 
@@ -205,6 +205,7 @@ ${topChuva.length
   ? topChuva.map((c,i)=>`${i+1}. ${c.nome}/${c.uf} — <b>${c.precipitacao} mm</b>`).join("<br>")
   : "Sem registros"}
 `;
+
 
       payload.dados.forEach(cidade => {
         if (typeof cidade.lat !== "number" || typeof cidade.lon !== "number") return;

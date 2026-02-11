@@ -13,9 +13,11 @@ TOKEN = os.getenv("INMET_TOKEN") or "bEhBU0szRjV4TGhic2E3ZHpndEVTVENrSkN4NjJxZm0
 TIMEOUT = 4
 MAX_ESTACOES = 600
 
+
 @app.route("/")
 def home():
     return send_from_directory("static", "mapa.html")
+
 
 def to_float(v):
     try:
@@ -23,16 +25,19 @@ def to_float(v):
     except:
         return None
 
+
 def buscar_horarios_disponiveis():
     agora = time.gmtime()
     data = time.strftime("%Y-%m-%d", agora)
     hora_atual = int(time.strftime("%H", agora))
     return data, [f"{h:02d}00" for h in range(hora_atual + 1)]
 
+
 @app.route("/api/clima")
 def api_clima():
     data, horarios = buscar_horarios_disponiveis()
     hora = horarios[-1]
+
     url = f"https://apitempo.inmet.gov.br/token/estacao/dados/{data}/{hora}/{TOKEN}"
 
     try:
@@ -41,6 +46,7 @@ def api_clima():
         return jsonify({"dados": []})
 
     resultado = []
+
     for e in estacoes[:MAX_ESTACOES]:
         lat = to_float(e.get("VL_LATITUDE"))
         lon = to_float(e.get("VL_LONGITUDE"))
@@ -79,29 +85,38 @@ def relatorio_diario():
     registros_temp_min = []
     registros_chuva = []
 
-    # Coleta os dados de todos os horários
+    acumulado_chuva = {}
+
     for hora in horarios:
         url = f"https://apitempo.inmet.gov.br/token/estacao/dados/{data}/{hora}/{TOKEN}"
+
         try:
             estacoes = requests.get(url, timeout=TIMEOUT).json()
         except:
             continue
 
         for e in estacoes[:MAX_ESTACOES]:
+            chave = f"{e.get('DC_NOME')}/{e.get('UF')}"
+
             temp_max = to_float(e.get("TEM_MAX"))
             temp_min = to_float(e.get("TEM_MIN"))
             chuva = to_float(e.get("CHUVA"))
 
-            chave = f"{e.get('DC_NOME')}/{e.get('UF')}"
-
             if temp_max is not None:
                 registros_temp_max.append((chave, hora, temp_max))
+
             if temp_min is not None:
                 registros_temp_min.append((chave, hora, temp_min))
+
             if chuva is not None and chuva > 0:
                 registros_chuva.append((chave, hora, chuva))
 
-    # Função para manter apenas o maior ou menor valor por estação
+                if chave not in acumulado_chuva:
+                    acumulado_chuva[chave] = chuva
+                else:
+                    acumulado_chuva[chave] += chuva
+
+
     def extremos_por_estacao(registros, maior=True):
         d = {}
         for chave, hora, valor in registros:
@@ -112,12 +127,36 @@ def relatorio_diario():
                     d[chave] = (hora, valor)
                 elif not maior and valor < d[chave][1]:
                     d[chave] = (hora, valor)
-        return [(hora, chave.split("/")[0], chave.split("/")[1], valor) for chave, (hora, valor) in d.items()]
 
-    # Top 10 por ranking
-    top_quentes = sorted(extremos_por_estacao(registros_temp_max, maior=True), key=lambda x: x[3], reverse=True)[:10]
-    top_frias   = sorted(extremos_por_estacao(registros_temp_min, maior=False), key=lambda x: x[3])[:10]
-    top_chuva   = sorted(extremos_por_estacao(registros_chuva, maior=True), key=lambda x: x[3], reverse=True)[:10]
+        return [
+            (hora, chave.split("/")[0], chave.split("/")[1], valor)
+            for chave, (hora, valor) in d.items()
+        ]
+
+
+    top_quentes = sorted(
+        extremos_por_estacao(registros_temp_max, maior=True),
+        key=lambda x: x[3],
+        reverse=True
+    )[:10]
+
+    top_frias = sorted(
+        extremos_por_estacao(registros_temp_min, maior=False),
+        key=lambda x: x[3]
+    )[:10]
+
+    top_chuva = sorted(
+        extremos_por_estacao(registros_chuva, maior=True),
+        key=lambda x: x[3],
+        reverse=True
+    )[:10]
+
+    top_chuva_acumulada = sorted(
+        [(k.split("/")[0], k.split("/")[1], v) for k, v in acumulado_chuva.items()],
+        key=lambda x: x[2],
+        reverse=True
+    )[:10]
+
 
     hoje = datetime.utcnow().strftime("%d/%m/%Y")
 
@@ -126,6 +165,13 @@ def relatorio_diario():
             f"<tr><td>{h}</td><td>{c}/{u}</td><td><b>{v}</b></td></tr>"
             for h, c, u, v in lista
         )
+
+    def linha_acumulado(lista):
+        return "".join(
+            f"<tr><td>{c}/{u}</td><td><b>{v:.1f}</b></td></tr>"
+            for c, u, v in lista
+        )
+
 
     html = f"""
 <!DOCTYPE html>
@@ -141,14 +187,15 @@ table {{ width:100%; border-collapse:collapse; margin-top:10px; font-size:14px; 
 th,td {{ padding:10px; border-bottom:1px solid #ddd; text-align:center; }}
 th {{ background:#eee; }}
 .section {{ margin-top:35px; border-radius:8px; padding:15px; }}
-.top-quente {{ background: #ffe6e6; }}
-.top-frio {{ background: #e6f0ff; }}
-.top-chuva {{ background: #e6ffe6; }}
+.top-quente {{ background:#ffe6e6; }}
+.top-frio {{ background:#e6f0ff; }}
+.top-chuva {{ background:#e6ffe6; }}
 </style>
 </head>
 <body>
+
 <div class="container">
-<h1>📊 Relatório Diário Extremos</h1>
+<h1>📊 Relatório Diário de Extremos</h1>
 <p style="text-align:center; font-size:16px;">📅 {hoje}</p>
 
 <div class="section top-quente">
@@ -168,10 +215,18 @@ th {{ background:#eee; }}
 </div>
 
 <div class="section top-chuva">
-<h2>🌧️ Maiores Precipitações do Dia</h2>
+<h2>🌧️ Maiores Chuvas Horárias</h2>
 <table>
 <tr><th>Hora</th><th>Estação</th><th>mm</th></tr>
 {linha(top_chuva) if top_chuva else "<tr><td colspan='3'>Sem registros</td></tr>"}
+</table>
+</div>
+
+<div class="section top-chuva">
+<h2>🌧️🌧️ Maiores Acumulados de Chuva do Dia</h2>
+<table>
+<tr><th>Estação</th><th>mm (acumulado)</th></tr>
+{linha_acumulado(top_chuva_acumulada) if top_chuva_acumulada else "<tr><td colspan='2'>Sem registros</td></tr>"}
 </table>
 </div>
 
