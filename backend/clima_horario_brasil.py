@@ -33,6 +33,7 @@ def buscar_horarios_disponiveis():
     return data, [f"{h:02d}00" for h in range(hora_atual + 1)]
 
 
+
 @app.route("/api/clima")
 def api_clima():
     data, horarios = buscar_horarios_disponiveis()
@@ -56,6 +57,7 @@ def api_clima():
             continue
 
         resultado.append({
+            "codigo": e.get("CD_ESTACAO"),
             "nome": e.get("DC_NOME"),
             "uf": e.get("UF"),
             "lat": lat,
@@ -236,6 +238,38 @@ th {{ background:#eee; }}
 """
 
     return Response(html, mimetype="text/html")
+
+@app.route("/diario/<codigo>")
+def diario_estacao(codigo):
+
+    data, horarios = buscar_horarios_disponiveis()
+    registros = []
+
+    for hora in horarios:
+        url = f"https://apitempo.inmet.gov.br/token/estacao/dados/{data}/{hora}/{TOKEN}"
+
+        try:
+            estacoes = requests.get(url, timeout=TIMEOUT).json()
+        except:
+            continue
+
+        for e in estacoes:
+            if e.get("CD_ESTACAO") == codigo:
+
+                registros.append({
+                    "hora": hora,
+                    "temp": to_float(e.get("TEM_INS")),
+                    "temp_max": to_float(e.get("TEM_MAX")),
+                    "temp_min": to_float(e.get("TEM_MIN")),
+                    "umidade": to_float(e.get("UMD_INS")),
+                    "vento": to_float(e.get("VEN_VEL")),
+                    "chuva": to_float(e.get("CHUVA")),
+                })
+
+    if not registros:
+        return f"Nenhum dado encontrado para estação {codigo}"
+
+    return jsonify(registros)
 
 
 if __name__ == "__main__":

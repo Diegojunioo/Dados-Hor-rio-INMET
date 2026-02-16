@@ -71,6 +71,12 @@ html, body {
   #legenda.fechada #legenda-conteudo {
     display: none;
   }
+
+  .link-relatorio {
+    width: 100%;
+    text-align: center;
+    font-size: 14px;
+  }
 }
 
 /* 🖥️ Desktop */
@@ -125,6 +131,24 @@ html, body {
 .link-frio:hover,
 .link-chuva:hover {
   text-decoration: underline;
+}
+
+/* 📊 LINK RELATÓRIO ESTAÇÃO */
+.link-relatorio {
+  display: inline-block;
+  margin-top: 8px;
+  padding: 6px 8px;
+  background: #1976d2;
+  color: #ffffff;
+  font-weight: bold;
+  border-radius: 6px;
+  text-decoration: none;
+  font-size: 13px;
+  transition: 0.2s ease;
+}
+
+.link-relatorio:hover {
+  background: #0d47a1;
 }
 </style>
 </head>
@@ -264,13 +288,21 @@ ${topChuva.length
         .bindPopup(`
 <b>${c.nome} - ${c.uf}</b><br>
 <small>🕒 ${formatarDataHoraBR_UTC(c.data, c.hora)}</small><br><br>
+
 🌡️ Temp Atual: ${c.temperatura} °C<br>
 🌡️ Temp Máx: ${c.temperatura_maxima ?? "N/A"} °C<br>
 🌡️ Temp Min: ${c.temperatura_minima ?? "N/A"} °C<br>
 💧 Umidade: ${c.umidade ?? "N/A"} %<br>
 💨 Vento: ${c.vento ?? "N/A"} m/s<br>
-🌧️ Chuva: ${c.precipitacao ?? 0} mm
+🌧️ Chuva: ${c.precipitacao ?? 0} mm<br><br>
+
+<a href="/diario/${c.codigo}" 
+   target="_blank"
+   class="link-relatorio">
+📊 Ver dados diários
+</a>
 `)
+
         .bindTooltip(`<b>${c.nome}/${c.uf}</b>`, { sticky: true })
         .addTo(layerEstacoes);
       });
