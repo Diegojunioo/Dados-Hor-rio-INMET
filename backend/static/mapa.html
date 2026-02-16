@@ -134,21 +134,34 @@ html, body {
 }
 
 /* 📊 LINK RELATÓRIO ESTAÇÃO */
-.link-relatorio {
-  display: inline-block;
-  margin-top: 8px;
-  padding: 6px 8px;
-  background: #1976d2;
-  color: #ffffff;
-  font-weight: bold;
-  border-radius: 6px;
+.btn-relatorio {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  margin-top: 12px;
+  padding: 10px 14px;
+  background: linear-gradient(135deg, #1e3c72, #2a5298);
+  color: white !important;   /* 👈 força texto branco */
   text-decoration: none;
-  font-size: 13px;
-  transition: 0.2s ease;
+  border-radius: 8px;
+  font-weight: 600;
+  font-size: 14px;
+  transition: all 0.25s ease;
 }
 
-.link-relatorio:hover {
-  background: #0d47a1;
+.btn-relatorio:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 14px rgba(0,0,0,0.25);
+  background: linear-gradient(135deg, #2a5298, #1e3c72);
+}
+
+.btn-relatorio .icon {
+  font-size: 16px;
+}
+
+.btn-relatorio:hover {
+  color: white !important;   /* 👈 mantém branco no hover */
 }
 </style>
 </head>
@@ -296,10 +309,12 @@ ${topChuva.length
 💨 Vento: ${c.vento ?? "N/A"} m/s<br>
 🌧️ Chuva: ${c.precipitacao ?? 0} mm<br><br>
 
-<a href="/diario/${c.codigo}" 
+<a href="/diario/${c.codigo}"
    target="_blank"
-   class="link-relatorio">
-📊 Ver dados diários
+   rel="noopener noreferrer" 
+   class="btn-relatorio">
+   <span class="icon">📊</span>
+   Dados Diários
 </a>
 `)
 
