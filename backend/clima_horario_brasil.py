@@ -269,7 +269,71 @@ def diario_estacao(codigo):
     if not registros:
         return f"Nenhum dado encontrado para estação {codigo}"
 
-    return jsonify(registros)
+    # Monta linhas da tabela
+    linhas = "".join(
+        f"<tr>"
+        f"<td>{r['hora']}</td>"
+        f"<td>{r['temp'] if r['temp'] is not None else '-'}</td>"
+        f"<td>{r['temp_max'] if r['temp_max'] is not None else '-'}</td>"
+        f"<td>{r['temp_min'] if r['temp_min'] is not None else '-'}</td>"
+        f"<td>{r['umidade'] if r['umidade'] is not None else '-'}</td>"
+        f"<td>{r['vento'] if r['vento'] is not None else '-'}</td>"
+        f"<td>{r['chuva'] if r['chuva'] is not None else '-'}</td>"
+        f"</tr>"
+        for r in registros
+    )
+
+    html = f"""
+    <!DOCTYPE html>
+    <html lang="pt-BR">
+    <head>
+    <meta charset="UTF-8">
+    <title>Relatório Diário - {codigo}</title>
+    <style>
+    body {{ font-family: Arial; background:#f4f6f9; padding:20px; }}
+    .container {{
+        background:white;
+        padding:25px;
+        border-radius:10px;
+        max-width:1100px;
+        margin:auto;
+        box-shadow:0 4px 12px rgba(0,0,0,0.1);
+    }}
+    table {{ width:100%; border-collapse:collapse; margin-top:15px; }}
+    th, td {{
+        padding:8px;
+        border-bottom:1px solid #ddd;
+        text-align:center;
+    }}
+    th {{
+        background:#1976d2;
+        color:white;
+    }}
+    h1 {{ text-align:center; }}
+    </style>
+    </head>
+    <body>
+    <div class="container">
+        <h1>📊 Relatório Diário - Estação {codigo}</h1>
+
+        <table>
+            <tr>
+                <th>Hora</th>
+                <th>Temp</th>
+                <th>Temp Máx</th>
+                <th>Temp Min</th>
+                <th>Umidade</th>
+                <th>Vento</th>
+                <th>Chuva</th>
+            </tr>
+            {linhas}
+        </table>
+    </div>
+    </body>
+    </html>
+    """
+
+    return Response(html, mimetype="text/html")
 
 
 if __name__ == "__main__":
