@@ -11,7 +11,7 @@ CORS(app)
 TOKEN = os.getenv("INMET_TOKEN") or "bEhBU0szRjV4TGhic2E3ZHpndEVTVENrSkN4NjJxZm0=lHASK3F5xLhbsa7dzgtESTCkJCx62qfm"
 
 TIMEOUT = 4
-MAX_ESTACOES = 600
+MAX_ESTACOES = 1500
 
 
 @app.route("/")
