@@ -86,6 +86,9 @@ def relatorio_diario():
     registros_temp_max = []
     registros_temp_min = []
     registros_chuva = []
+    registros_umidade_max = []
+    registros_umidade_min = []
+    registros_vento = []
 
     acumulado_chuva = {}
 
@@ -102,13 +105,23 @@ def relatorio_diario():
 
             temp_max = to_float(e.get("TEM_MAX"))
             temp_min = to_float(e.get("TEM_MIN"))
+            umidade = to_float(e.get("UMD_INS"))
             chuva = to_float(e.get("CHUVA"))
+            vento = to_float(e.get("VEN_VEL"))
+
+            if vento is not None:
+                registros_vento.append((chave, hora, vento))
 
             if temp_max is not None:
                 registros_temp_max.append((chave, hora, temp_max))
 
             if temp_min is not None:
                 registros_temp_min.append((chave, hora, temp_min))
+            umidade = to_float(e.get("UMD_INS"))
+
+            if umidade is not None:
+                registros_umidade_max.append((chave, hora, umidade))
+                registros_umidade_min.append((chave, hora, umidade))
 
             if chuva is not None and chuva > 0:
                 registros_chuva.append((chave, hora, chuva))
@@ -117,6 +130,8 @@ def relatorio_diario():
                     acumulado_chuva[chave] = chuva
                 else:
                     acumulado_chuva[chave] += chuva
+            
+        
 
 
     def extremos_por_estacao(registros, maior=True):
@@ -140,25 +155,41 @@ def relatorio_diario():
         extremos_por_estacao(registros_temp_max, maior=True),
         key=lambda x: x[3],
         reverse=True
-    )[:10]
+    )[:15]
 
     top_frias = sorted(
         extremos_por_estacao(registros_temp_min, maior=False),
         key=lambda x: x[3]
-    )[:10]
+    )[:15]
+
+    top_umidade_max = sorted(
+        extremos_por_estacao(registros_umidade_max, maior=True),
+        key=lambda x: x[3],
+        reverse=True
+    )[:15]
+
+    top_umidade_min = sorted(
+        extremos_por_estacao(registros_umidade_min, maior=False),
+        key=lambda x: x[3]
+    )[:15]
 
     top_chuva = sorted(
         extremos_por_estacao(registros_chuva, maior=True),
         key=lambda x: x[3],
         reverse=True
-    )[:10]
+    )[:15]
 
     top_chuva_acumulada = sorted(
         [(k.split("/")[0], k.split("/")[1], v) for k, v in acumulado_chuva.items()],
         key=lambda x: x[2],
         reverse=True
-    )[:10]
+    )[:15]
 
+    Top_vento = sorted(
+        extremos_por_estacao(registros_vento, maior=True),
+        key=lambda x: x[3],
+        reverse=True
+    )[:15]
 
     hoje = datetime.utcnow().strftime("%d/%m/%Y")
 
@@ -192,6 +223,10 @@ th {{ background:#eee; }}
 .top-quente {{ background:#ffe6e6; }}
 .top-frio {{ background:#e6f0ff; }}
 .top-chuva {{ background:#e6ffe6; }}
+.top-umidade-max {{ background:#fff3e0; }}
+.top-umidade-min {{ background:#fff3e0; }}
+.top-vento {{ background:#f0f0f0; }}
+
 </style>
 </head>
 <body>
@@ -216,6 +251,30 @@ th {{ background:#eee; }}
 </table>
 </div>
 
+<div class="section top-umidade-max">
+<h2>💧💧 Maiores Umidades do Dia</h2>
+<table>
+<tr><th>Hora</th><th>Estação</th><th>%</th></tr>
+{linha(top_umidade_max)}
+</table>
+</div>
+
+<div class="section top-umidade-min">
+<h2>💧 Menores Umidades do Dia</h2>
+<table>
+<tr><th>Hora</th><th>Estação</th><th>%</th></tr>
+{linha(top_umidade_min)}
+</table>
+</div>
+
+<div class="section top-vento">
+<h2>💨 Maiores Velocidades de Vento do Dia</h2>
+<table>
+<tr><th>Hora</th><th>Estação</th><th>m/s</th></tr>
+{linha(Top_vento)}
+</table>
+</div>
+
 <div class="section top-chuva">
 <h2>🌧️ Maiores Chuvas Horárias</h2>
 <table>
@@ -225,7 +284,7 @@ th {{ background:#eee; }}
 </div>
 
 <div class="section top-chuva">
-<h2>🌧️🌧️ Maiores Acumulados de Chuva do Dia</h2>
+<h2>🌧️🌧️ Acumulados de Chuva do Dia</h2>
 <table>
 <tr><th>Estação</th><th>mm (acumulado)</th></tr>
 {linha_acumulado(top_chuva_acumulada) if top_chuva_acumulada else "<tr><td colspan='2'>Sem registros</td></tr>"}
