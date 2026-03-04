@@ -11,7 +11,7 @@ CORS(app)
 TOKEN = os.getenv("INMET_TOKEN") or "bEhBU0szRjV4TGhic2E3ZHpndEVTVENrSkN4NjJxZm0=lHASK3F5xLhbsa7dzgtESTCkJCx62qfm"
 
 TIMEOUT = 4
-MAX_ESTACOES = 1500
+MAX_ESTACOES = 2000
 
 
 @app.route("/")
@@ -67,6 +67,7 @@ def api_clima():
             "temperatura_minima": to_float(e.get("TEM_MIN")),
             "umidade": to_float(e.get("UMD_INS")),
             "vento": to_float(e.get("VEN_VEL")),
+            "vento_rajada": to_float(e.get("VEN_RAJ")),
             "precipitacao": to_float(e.get("CHUVA")),
             "data": e.get("DT_MEDICAO"),
             "hora": e.get("HR_MEDICAO")
@@ -107,7 +108,7 @@ def relatorio_diario():
             temp_min = to_float(e.get("TEM_MIN"))
             umidade = to_float(e.get("UMD_INS"))
             chuva = to_float(e.get("CHUVA"))
-            vento = to_float(e.get("VEN_VEL"))
+            vento = to_float(e.get("VEN_RAJ"))
 
             if vento is not None:
                 registros_vento.append((chave, hora, vento))
@@ -303,6 +304,7 @@ def diario_estacao(codigo):
 
     data, horarios = buscar_horarios_disponiveis()
     registros = []
+    nome_estacao = None
 
     for hora in horarios:
         url = f"https://apitempo.inmet.gov.br/token/estacao/dados/{data}/{hora}/{TOKEN}"
@@ -315,29 +317,63 @@ def diario_estacao(codigo):
         for e in estacoes:
             if e.get("CD_ESTACAO") == codigo:
 
+                if not nome_estacao:
+                    nome_estacao = f"{e.get('DC_NOME')} - {e.get('UF')}"
+
                 registros.append({
                     "hora": hora,
                     "temp": to_float(e.get("TEM_INS")),
                     "temp_max": to_float(e.get("TEM_MAX")),
                     "temp_min": to_float(e.get("TEM_MIN")),
                     "umidade": to_float(e.get("UMD_INS")),
+                    "umidade_max": to_float(e.get("UMD_MAX")),
+                    "umidade_min": to_float(e.get("UMD_MIN")),
+                    "orvalho": to_float(e.get("PTO_INS")),
+                    "orvalho_max": to_float(e.get("PTO_MAX")),
+                    "orvalho_min": to_float(e.get("PTO_MIN")),
+                    "pressao": to_float(e.get("PRE_INS")),
+                    "pressao_max": to_float(e.get("PRE_MAX")),
+                    "pressao_min": to_float(e.get("PRE_MIN")),
                     "vento": to_float(e.get("VEN_VEL")),
+                    "vento_direcao": e.get("VEN_DIR"),
+                    "vento_rajada": to_float(e.get("VEN_RAJ")),
+                    "radiacao": to_float(e.get("RAD_GLO")),
                     "chuva": to_float(e.get("CHUVA")),
                 })
 
     if not registros:
         return f"Nenhum dado encontrado para estação {codigo}"
 
-    # Monta linhas da tabela
+    if not nome_estacao:
+        nome_estacao = "Nome não disponível"
+
     linhas = "".join(
         f"<tr>"
         f"<td>{r['hora']}</td>"
+
         f"<td>{r['temp'] if r['temp'] is not None else '-'}</td>"
         f"<td>{r['temp_max'] if r['temp_max'] is not None else '-'}</td>"
         f"<td>{r['temp_min'] if r['temp_min'] is not None else '-'}</td>"
+
         f"<td>{r['umidade'] if r['umidade'] is not None else '-'}</td>"
+        f"<td>{r['umidade_max'] if r['umidade_max'] is not None else '-'}</td>"
+        f"<td>{r['umidade_min'] if r['umidade_min'] is not None else '-'}</td>"
+
+        f"<td>{r['orvalho'] if r['orvalho'] is not None else '-'}</td>"
+        f"<td>{r['orvalho_max'] if r['orvalho_max'] is not None else '-'}</td>"
+        f"<td>{r['orvalho_min'] if r['orvalho_min'] is not None else '-'}</td>"
+
+        f"<td>{r['pressao'] if r['pressao'] is not None else '-'}</td>"
+        f"<td>{r['pressao_max'] if r['pressao_max'] is not None else '-'}</td>"
+        f"<td>{r['pressao_min'] if r['pressao_min'] is not None else '-'}</td>"
+
         f"<td>{r['vento'] if r['vento'] is not None else '-'}</td>"
-        f"<td>{r['chuva'] if r['chuva'] is not None else '-'}</td>"
+        f"<td>{r['vento_direcao'] if r['vento_direcao'] else '-'}</td>"
+        f"<td>{r['vento_rajada'] if r['vento_rajada'] is not None else '-'}</td>"
+
+        f"<td>{format(r['radiacao'], '.1f') if r['radiacao'] is not None else '-'}</td>"
+        f"<td>{format(r['chuva'], '.1f') if r['chuva'] is not None else '-'}</td>"
+
         f"</tr>"
         for r in registros
     )
@@ -347,47 +383,141 @@ def diario_estacao(codigo):
     <html lang="pt-BR">
     <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Relatório Diário - {codigo}</title>
+
     <style>
-    body {{ font-family: Arial; background:#f4f6f9; padding:20px; }}
+    body {{
+        font-family: Arial, sans-serif;
+        background: #f4f6f9;
+        padding: 20px;
+    }}
+
     .container {{
-        background:white;
-        padding:25px;
-        border-radius:10px;
-        max-width:1100px;
-        margin:auto;
-        box-shadow:0 4px 12px rgba(0,0,0,0.1);
+        background: white;
+        padding: 25px;
+        border-radius: 12px;
+        max-width: 100%;
+        margin: auto;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.08);
     }}
-    table {{ width:100%; border-collapse:collapse; margin-top:15px; }}
+
+    h1 {{
+        text-align: center;
+        margin-bottom: 5px;
+    }}
+
+    .subtitulo {{
+        text-align: center;
+        font-size: 18px;
+        color: #555;
+        margin-bottom: 20px;
+    }}
+
+    .table-wrapper {{
+        width: 100%;
+        overflow-x: auto;
+    }}
+
+    table {{
+        border-collapse: collapse;
+        width: 100%;
+        min-width: 1500px;
+    }}
+
     th, td {{
-        padding:8px;
-        border-bottom:1px solid #ddd;
-        text-align:center;
+        padding: 8px;
+        border-bottom: 1px solid #e0e0e0;
+        text-align: center;
+        font-size: 14px;
+        white-space: nowrap;
     }}
-    th {{
-        background:#1976d2;
-        color:white;
+
+    thead th {{
+        background: #1976d2;
+        color: white;
+        position: sticky;
+        top: 0;
+        z-index: 2;
     }}
-    h1 {{ text-align:center; }}
+
+    /* 🔥 Separação branca vertical - primeira linha */
+    thead tr:first-child th[colspan],
+    thead tr:first-child th[rowspan] {{
+        border-right: 2px solid white;
+    }}
+
+    /* 🔥 Separação branca - segunda linha */
+    thead tr:nth-child(2) th:nth-child(3),
+    thead tr:nth-child(2) th:nth-child(6),
+    thead tr:nth-child(2) th:nth-child(9),
+    thead tr:nth-child(2) th:nth-child(12),
+    thead tr:nth-child(2) th:nth-child(15),
+    thead tr:nth-child(2) th:nth-child(16),
+    thead tr:nth-child(2) th:nth-child(17) {{
+        border-right: 2px solid white;
+    }}
+
+    /* 🔥 Separação branca no corpo */
+    tbody td:nth-child(4),
+    tbody td:nth-child(7),
+    tbody td:nth-child(10),
+    tbody td:nth-child(13),
+    tbody td:nth-child(16),
+    tbody td:nth-child(17),
+    tbody td:nth-child(18) {{
+        border-right: 2px solid white;
+    }}
+
+    tr:nth-child(even) {{
+        background: #f9f9f9;
+    }}
+
+    tr:hover {{
+        background: #eef4ff;
+    }}
+
     </style>
     </head>
-    <body>
-    <div class="container">
-        <h1>📊 Relatório Diário - Estação {codigo}</h1>
 
-        <table>
-            <tr>
-                <th>Hora</th>
-                <th>Temp</th>
-                <th>Temp Máx</th>
-                <th>Temp Min</th>
-                <th>Umidade</th>
-                <th>Vento</th>
-                <th>Chuva</th>
-            </tr>
-            {linhas}
-        </table>
-    </div>
+    <body>
+        <div class="container">
+            <h1>📊 Relatório Diário</h1>
+            <div class="subtitulo">
+                Estação {codigo} - {nome_estacao}
+            </div>
+
+            <div class="table-wrapper">
+                <table>
+                    <thead>
+                        <tr>
+                            <th rowspan="2">Hora</th>
+                            <th colspan="3">Temperatura</th>
+                            <th colspan="3">Umidade</th>
+                            <th colspan="3">Orvalho</th>
+                            <th colspan="3">Pressão</th>
+                            <th colspan="3">Vento</th>
+                            <th colspan="1">Radiação</th>
+                            <th colspan="1">Chuva</th>
+                        </tr>
+
+                        <tr>
+                            <th>Inst.</th><th>Máx</th><th>Min</th>
+                            <th>Inst.</th><th>Máx</th><th>Min</th>
+                            <th>Inst.</th><th>Máx</th><th>Min</th>
+                            <th>Inst.</th><th>Máx</th><th>Min</th>
+                            <th>Vel.</th><th>Dir.(°)</th><th>Raj.</th>
+                            <th>(kJ/m²)</th>
+                            <th>(mm)</th>
+                        </tr>
+                    </thead>
+
+                    <tbody>
+                        {linhas}
+                    </tbody>
+                </table>
+            </div>
+        </div>
     </body>
     </html>
     """
