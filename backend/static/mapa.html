@@ -2,7 +2,7 @@
 <html lang="pt-BR">
 <head>
 <meta charset="UTF-8">
-<title>Clima Horário Brasil</title>
+<title>Dados Horário Brasil</title>
 
 <!-- 📱 MOBILE -->
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -268,20 +268,20 @@ ${formatarDataBR(payload.ultima_atualizacao)} UTC<br><br>
 
 🌡️ <b>Estações válidas:</b> ${payload.total_estacoes}<hr>
 📊 <a href="/relatorio/diario" target="_blank" class="link-extremos">
-<b>EXTREMOS DIÁRIO</b>
+<b>DADOS EXTREMOS DIÁRIO</b>
 </a>
 
 <hr>
 
-🔥 <b class="link-quente">Top 5 mais quentes</b><br>
+🔥 <b class="link-quente">Top 5 mais quentes horário</b><br>
 ${topQuentes.map((c,i)=>`${i+1}. ${c.nome}/${c.uf} — <b>${c.temperatura}°C</b>`).join("<br>")}
 <br><br>
 
-❄️ <b class="link-frio">Top 5 mais frias</b><br>
+❄️ <b class="link-frio">Top 5 mais frias horário</b><br>
 ${topFrias.map((c,i)=>`${i+1}. ${c.nome}/${c.uf} — <b>${c.temperatura}°C</b>`).join("<br>")}
 <br><br>
 
-🌧️ <b class="link-chuva">Top 5 precipitação</b><br>
+🌧️ <b class="link-chuva">Top 5 precipitação horário</b><br>
 ${topChuva.length
   ? topChuva.map((c,i)=>`${i+1}. ${c.nome}/${c.uf} — <b>${c.precipitacao} mm</b>`).join("<br>")
   : "Sem registros"}
