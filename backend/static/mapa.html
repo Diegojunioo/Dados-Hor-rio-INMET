@@ -190,11 +190,11 @@ L.control.zoom({ position: "bottomright" }).addTo(map);
 
 /* 🔍 Busca por cidade */
 L.Control.geocoder({
-  position: "topright",
-  placeholder: "Buscar cidade...",
-  errorMessage: "Cidade não encontrada",
-  defaultMarkGeocode: true,
-  expand: "click"
+ position: "topright",
+ placeholder: "Buscar cidade...",
+ errorMessage: "Cidade não encontrada",
+ defaultMarkGeocode: true,
+ expand: "click"
 }).addTo(map);
 
 /* 🗺️ CAMADAS */
@@ -299,7 +299,7 @@ ${topChuva.length
           fillOpacity: 0.9
         })
         .bindPopup(`
-<b>${c.nome} - ${c.uf}</b><br>
+<b>${c.nome}/${c.uf} - ${c.codigo}</b><br>
 <small>🕒 ${formatarDataHoraBR_UTC(c.data, c.hora)}</small><br><br>
 
 🌡️ Temp Atual: ${c.temperatura} °C<br>
@@ -318,7 +318,7 @@ ${topChuva.length
 </a>
 `)
 
-        .bindTooltip(`<b>${c.nome}/${c.uf}</b>`, { sticky: true })
+        .bindTooltip(`<b>${c.nome}/${c.uf} - ${c.codigo}</b>`, { sticky: true })
         .addTo(layerEstacoes);
       });
 

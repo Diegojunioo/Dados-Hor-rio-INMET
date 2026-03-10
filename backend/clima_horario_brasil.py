@@ -318,7 +318,7 @@ def diario_estacao(codigo):
             if e.get("CD_ESTACAO") == codigo:
 
                 if not nome_estacao:
-                    nome_estacao = f"{e.get('DC_NOME')} - {e.get('UF')}"
+                    nome_estacao = f"{e.get('DC_NOME')}/{e.get('UF')}"
 
                 registros.append({
                     "hora": hora,
@@ -484,7 +484,7 @@ def diario_estacao(codigo):
         <div class="container">
             <h1>📊 Relatório Diário</h1>
             <div class="subtitulo">
-                Estação {codigo} - {nome_estacao}
+                Estação {nome_estacao} - {codigo}
             </div>
 
             <div class="table-wrapper">
