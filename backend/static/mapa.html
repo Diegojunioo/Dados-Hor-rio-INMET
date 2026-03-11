@@ -133,6 +133,23 @@ html, body {
   text-decoration: underline;
 }
 
+.botao-extremos{
+  display:inline-block;
+  background:#1f4ed8;
+  color:#fff;
+  padding:8px 14px;
+  border-radius:6px;
+  text-decoration:none;
+  font-weight:bold;
+  font-size:13px;
+  transition:0.2s;
+}
+
+.botao-extremos:hover{
+  background:#163aa6;
+  transform:scale(1.05);
+}
+
 /* 📊 LINK RELATÓRIO ESTAÇÃO */
 .btn-relatorio {
   display: flex;
@@ -267,9 +284,11 @@ function carregarDados() {
 ${formatarDataBR(payload.ultima_atualizacao)} UTC<br><br>
 
 🌡️ <b>Estações válidas:</b> ${payload.total_estacoes}<hr>
-📊 <a href="/relatorio/diario" target="_blank" class="link-extremos">
-<b>DADOS EXTREMOS DIÁRIO</b>
+<div style="text-align:center;">
+<a href="/relatorio/diario" target="_blank" class="botao-extremos">
+📊 DADOS EXTREMOS DIÁRIO
 </a>
+</div>
 
 <hr>
 
