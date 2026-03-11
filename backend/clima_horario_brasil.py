@@ -302,7 +302,19 @@ th {{ background:#eee; }}
 @app.route("/diario/<codigo>")
 def diario_estacao(codigo):
 
-    data, horarios = buscar_horarios_disponiveis()
+    from flask import request
+    from datetime import datetime
+
+    data, _ = buscar_horarios_disponiveis()
+
+    # horários fixos do dia
+    horarios = [f"{h:02d}00" for h in range(24)]
+
+    data_param = request.args.get("data")
+
+    if data_param:
+        data = data_param.replace("-", "")
+
     registros = []
     nome_estacao = None
 
@@ -322,6 +334,11 @@ def diario_estacao(codigo):
 
                 registros.append({
                     "hora": hora,
+                    "data_exibicao": (
+                        datetime.strptime(data, "%Y-%m-%d").strftime("%d/%m/%Y")
+                        if "-" in data
+                        else datetime.strptime(data, "%Y%m%d").strftime("%d/%m/%Y")
+                    ),
                     "temp": to_float(e.get("TEM_INS")),
                     "temp_max": to_float(e.get("TEM_MAX")),
                     "temp_min": to_float(e.get("TEM_MIN")),
@@ -349,6 +366,7 @@ def diario_estacao(codigo):
 
     linhas = "".join(
         f"<tr>"
+        f"<td>{r['data_exibicao']}</td>"
         f"<td>{r['hora']}</td>"
 
         f"<td>{r['temp'] if r['temp'] is not None else '-'}</td>"
@@ -379,67 +397,86 @@ def diario_estacao(codigo):
     )
 
     html = f"""
-    <!DOCTYPE html>
-    <html lang="pt-BR">
-    <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Relatório Diário - {codigo}</title>
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
 
-    <style>
-    body {{
-        font-family: Arial, sans-serif;
-        background: #f4f6f9;
-        padding: 20px;
-    }}
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-    .container {{
-        background: white;
-        padding: 25px;
-        border-radius: 12px;
-        max-width: 100%;
-        margin: auto;
-        box-shadow: 0 4px 15px rgba(0,0,0,0.08);
-    }}
+<title>Relatório Diário - {codigo}</title>
 
-    h1 {{
-        text-align: center;
-        margin-bottom: 5px;
-    }}
+<style>
 
-    .subtitulo {{
-        text-align: center;
-        font-size: 18px;
-        color: #555;
-        margin-bottom: 20px;
-    }}
+body {{
+    font-family: Arial, sans-serif;
+    background: #f4f6f9;
+    padding: 20px;
+}}
 
-    .table-wrapper {{
-        width: 100%;
-        overflow-x: auto;
-    }}
+.container {{
+    background: white;
+    padding: 25px;
+    border-radius: 12px;
+    max-width: 100%;
+    margin: auto;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.08);
+}}
 
-    table {{
-        border-collapse: collapse;
-        width: 100%;
-        min-width: 1500px;
-    }}
+h1 {{
+    text-align: center;
+}}
 
-    th, td {{
-        padding: 8px;
-        border-bottom: 1px solid #e0e0e0;
-        text-align: center;
-        font-size: 14px;
-        white-space: nowrap;
-    }}
+.subtitulo {{
+    text-align: center;
+    font-size: 18px;
+    margin-bottom: 20px;
+}}
 
-    thead th {{
-        background: #1976d2;
-        color: white;
-        position: sticky;
-        top: 0;
-        z-index: 2;
-    }}
+.filtro {{
+    text-align:center;
+    margin-bottom:20px;
+}}
+
+button {{
+    padding:6px 12px;
+    background:#1976d2;
+    border:none;
+    color:white;
+    border-radius:5px;
+    cursor:pointer;
+}}
+
+.table-wrapper {{
+    overflow-x:auto;
+}}
+
+table {{
+    border-collapse: collapse;
+    width: 100%;
+    min-width:1500px;
+}}
+
+th, td {{
+    padding: 8px;
+    border-bottom: 1px solid #e0e0e0;
+    text-align: center;
+}}
+
+thead th {{
+    background:#1976d2;
+    color:white;
+    position: sticky;
+    top:0;
+}}
+
+tr:nth-child(even) {{
+    background:#f9f9f9;
+}}
+
+tr:hover {{
+    background:#eef4ff;
+}}
 
     /* 🔥 Separação branca vertical - primeira linha */
     thead tr:first-child th[colspan],
@@ -486,11 +523,24 @@ def diario_estacao(codigo):
             <div class="subtitulo">
                 Estação {nome_estacao} - {codigo}
             </div>
+<div class="filtro">
 
+<form method="get">
+
+📅 Buscar outra data
+
+<input type="date" name="data">
+
+<button type="submit">Buscar</button>
+
+</form>
+
+</div>
             <div class="table-wrapper">
                 <table>
                     <thead>
                         <tr>
+                            <th rowspan="2">Data</th>
                             <th rowspan="2">Hora</th>
                             <th colspan="3">Temperatura</th>
                             <th colspan="3">Umidade</th>
