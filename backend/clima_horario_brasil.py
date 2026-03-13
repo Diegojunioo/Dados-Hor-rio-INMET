@@ -3,15 +3,15 @@ from flask_cors import CORS
 import requests
 import os
 import time
-from datetime import datetime
+from datetime import datetime, timedelta, timezone
 
 app = Flask(__name__, static_folder="static")
 CORS(app)
 
 TOKEN = os.getenv("INMET_TOKEN") or "bEhBU0szRjV4TGhic2E3ZHpndEVTVENrSkN4NjJxZm0=lHASK3F5xLhbsa7dzgtESTCkJCx62qfm"
 
-TIMEOUT = 4
-MAX_ESTACOES = 2000
+TIMEOUT = 2
+MAX_ESTACOES = 1000
 
 
 @app.route("/")
@@ -36,46 +36,72 @@ def buscar_horarios_disponiveis():
 
 @app.route("/api/clima")
 def api_clima():
-    data, horarios = buscar_horarios_disponiveis()
-    hora = horarios[-1]
 
-    url = f"https://apitempo.inmet.gov.br/token/estacao/dados/{data}/{hora}/{TOKEN}"
+    agora = datetime.now(timezone.utc)
 
-    try:
-        estacoes = requests.get(url, timeout=TIMEOUT).json()
-    except:
-        return jsonify({"dados": []})
+    # últimas 12 horas
+    horarios = []
+    for i in range(12):
+        h = agora - timedelta(hours=i)
+        data = h.strftime("%Y-%m-%d")
+        hora = h.strftime("%H00")
+        horarios.append((data, hora))
 
-    resultado = []
+    estacoes_dict = {}
 
-    for e in estacoes[:MAX_ESTACOES]:
-        lat = to_float(e.get("VL_LATITUDE"))
-        lon = to_float(e.get("VL_LONGITUDE"))
-        temp = to_float(e.get("TEM_INS"))
+    for data, hora in horarios:
 
-        if not e.get("DC_NOME") or lat is None or lon is None or temp is None:
+        url = f"https://apitempo.inmet.gov.br/token/estacao/dados/{data}/{hora}/{TOKEN}"
+
+        try:
+            estacoes = requests.get(url, timeout=TIMEOUT).json()
+        except:
             continue
 
-        resultado.append({
-            "codigo": e.get("CD_ESTACAO"),
-            "nome": e.get("DC_NOME"),
-            "uf": e.get("UF"),
-            "lat": lat,
-            "lon": lon,
-            "temperatura": temp,
-            "temperatura_maxima": to_float(e.get("TEM_MAX")),
-            "temperatura_minima": to_float(e.get("TEM_MIN")),
-            "umidade": to_float(e.get("UMD_INS")),
-            "vento": to_float(e.get("VEN_VEL")),
-            "vento_rajada": to_float(e.get("VEN_RAJ")),
-            "precipitacao": to_float(e.get("CHUVA")),
-            "data": e.get("DT_MEDICAO"),
-            "hora": e.get("HR_MEDICAO")
-        })
+        for e in estacoes[:MAX_ESTACOES]:
+
+            codigo = e.get("CD_ESTACAO")
+
+            lat = to_float(e.get("VL_LATITUDE"))
+            lon = to_float(e.get("VL_LONGITUDE"))
+            temp = to_float(e.get("TEM_INS"))
+            umid = to_float(e.get("UMD_INS"))
+            vento = to_float(e.get("VEN_VEL"))
+            rajada = to_float(e.get("VEN_RAJ"))
+            chuva = to_float(e.get("CHUVA"))
+
+            # ignora registro completamente vazio
+            if all(v is None for v in [temp, umid, vento, rajada, chuva]):
+                continue
+
+            if not e.get("DC_NOME") or lat is None or lon is None:
+                continue
+
+            # mantém sempre o dado mais recente
+            if codigo not in estacoes_dict:
+
+                estacoes_dict[codigo] = {
+                    "codigo": codigo,
+                    "nome": e.get("DC_NOME"),
+                    "uf": e.get("UF"),
+                    "lat": lat,
+                    "lon": lon,
+                    "temperatura": temp,
+                    "temperatura_maxima": to_float(e.get("TEM_MAX")),
+                    "temperatura_minima": to_float(e.get("TEM_MIN")),
+                    "umidade": to_float(e.get("UMD_INS")),
+                    "vento": to_float(e.get("VEN_VEL")),
+                    "vento_rajada": to_float(e.get("VEN_RAJ")),
+                    "precipitacao": to_float(e.get("CHUVA")),
+                    "data": e.get("DT_MEDICAO"),
+                    "hora": e.get("HR_MEDICAO")
+                }
+
+    resultado = list(estacoes_dict.values())
 
     return jsonify({
         "total_estacoes": len(resultado),
-        "ultima_atualizacao": f"{data} {hora}",
+        "ultima_atualizacao": agora.strftime("%Y-%m-%d %H00"),
         "dados": resultado
     })
 
