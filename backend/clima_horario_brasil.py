@@ -1,4 +1,4 @@
-from flask import send_from_directory, Flask, jsonify, Response
+from flask import send_from_directory, Flask, jsonify, Response, request
 from flask_cors import CORS
 import requests
 import os
@@ -82,7 +82,19 @@ def api_clima():
 
 @app.route("/relatorio/diario")
 def relatorio_diario():
-    data, horarios = buscar_horarios_disponiveis()
+
+    # 📅 Captura data do buscador
+    data_param = request.args.get("data")
+
+    if data_param:
+        data_api = datetime.strptime(data_param, "%Y-%m-%d").strftime("%Y%m%d")
+        data_exibicao = datetime.strptime(data_param, "%Y-%m-%d").strftime("%d/%m/%Y")
+        data = data_api
+        horarios = [f"{str(h).zfill(2)}00" for h in range(24)]
+    else:
+        data, horarios = buscar_horarios_disponiveis()
+        data_exibicao = datetime.utcnow().strftime("%d/%m/%Y")
+        data_param = datetime.utcnow().strftime("%Y-%m-%d")
 
     registros_temp_max = []
     registros_temp_min = []
@@ -118,7 +130,6 @@ def relatorio_diario():
 
             if temp_min is not None:
                 registros_temp_min.append((chave, hora, temp_min))
-            umidade = to_float(e.get("UMD_INS"))
 
             if umidade is not None:
                 registros_umidade_max.append((chave, hora, umidade))
@@ -131,8 +142,6 @@ def relatorio_diario():
                     acumulado_chuva[chave] = chuva
                 else:
                     acumulado_chuva[chave] += chuva
-            
-        
 
 
     def extremos_por_estacao(registros, maior=True):
@@ -153,29 +162,29 @@ def relatorio_diario():
 
 
     top_quentes = sorted(
-        extremos_por_estacao(registros_temp_max, maior=True),
+        extremos_por_estacao(registros_temp_max, True),
         key=lambda x: x[3],
         reverse=True
     )[:15]
 
     top_frias = sorted(
-        extremos_por_estacao(registros_temp_min, maior=False),
+        extremos_por_estacao(registros_temp_min, False),
         key=lambda x: x[3]
     )[:15]
 
     top_umidade_max = sorted(
-        extremos_por_estacao(registros_umidade_max, maior=True),
+        extremos_por_estacao(registros_umidade_max, True),
         key=lambda x: x[3],
         reverse=True
     )[:15]
 
     top_umidade_min = sorted(
-        extremos_por_estacao(registros_umidade_min, maior=False),
+        extremos_por_estacao(registros_umidade_min, False),
         key=lambda x: x[3]
     )[:15]
 
     top_chuva = sorted(
-        extremos_por_estacao(registros_chuva, maior=True),
+        extremos_por_estacao(registros_chuva, True),
         key=lambda x: x[3],
         reverse=True
     )[:15]
@@ -187,18 +196,18 @@ def relatorio_diario():
     )[:15]
 
     Top_vento = sorted(
-        extremos_por_estacao(registros_vento, maior=True),
+        extremos_por_estacao(registros_vento, True),
         key=lambda x: x[3],
         reverse=True
     )[:15]
 
-    hoje = datetime.utcnow().strftime("%d/%m/%Y")
 
     def linha(lista):
         return "".join(
             f"<tr><td>{h}</td><td>{c}/{u}</td><td><b>{v}</b></td></tr>"
             for h, c, u, v in lista
         )
+
 
     def linha_acumulado(lista):
         return "".join(
@@ -213,28 +222,96 @@ def relatorio_diario():
 <head>
 <meta charset="UTF-8">
 <title>Relatório Diário – Extremos Horários</title>
+
 <style>
-body {{ font-family: Arial; background:#f0f2f5; padding:20px; }}
-.container {{ background:#fff; max-width:950px; margin:auto; padding:25px; border-radius:10px; box-shadow:0 4px 12px rgba(0,0,0,0.1); }}
-h1 {{ text-align:center; color:#333; }}
-table {{ width:100%; border-collapse:collapse; margin-top:10px; font-size:14px; }}
-th,td {{ padding:10px; border-bottom:1px solid #ddd; text-align:center; }}
-th {{ background:#eee; }}
-.section {{ margin-top:35px; border-radius:8px; padding:15px; }}
-.top-quente {{ background:#ffe6e6; }}
-.top-frio {{ background:#e6f0ff; }}
-.top-chuva {{ background:#e6ffe6; }}
-.top-umidade-max {{ background:#fff3e0; }}
-.top-umidade-min {{ background:#fff3e0; }}
-.top-vento {{ background:#f0f0f0; }}
+
+body {{
+font-family: Arial;
+background:#f0f2f5;
+padding:20px;
+}}
+
+.container {{
+background:#fff;
+max-width:950px;
+margin:auto;
+padding:25px;
+border-radius:10px;
+box-shadow:0 4px 12px rgba(0,0,0,0.1);
+}}
+
+h1 {{
+text-align:center;
+color:#333;
+}}
+
+table {{
+width:100%;
+border-collapse:collapse;
+margin-top:10px;
+font-size:14px;
+}}
+
+th,td {{
+padding:10px;
+border-bottom:1px solid #ddd;
+text-align:center;
+}}
+
+th {{
+background:#eee;
+}}
+
+.section {{
+margin-top:35px;
+border-radius:8px;
+padding:15px;
+}}
+
+.top-quente {{background:#ffe6e6;}}
+.top-frio {{background:#e6f0ff;}}
+.top-chuva {{background:#e6ffe6;}}
+.top-umidade-max {{background:#fff3e0;}}
+.top-umidade-min {{background:#fff3e0;}}
+.top-vento {{background:#f0f0f0;}}
+
+.buscar-data {{
+text-align:center;
+margin-bottom:15px;
+}}
+
+.buscar-data input {{
+padding:6px;
+font-size:14px;
+}}
+
+.buscar-data button {{
+    padding:6px 12px;
+    background:#1976d2;
+    border:none;
+    color:white;
+    border-radius:5px;
+    cursor:pointer;
+}}
 
 </style>
 </head>
+
 <body>
 
 <div class="container">
+
 <h1>📊 Relatório Diário de Extremos</h1>
-<p style="text-align:center; font-size:16px;">📅 {hoje}</p>
+
+<div class="buscar-data">
+<form method="get">
+<label>Busca Data:</label>
+<input type="date" name="data" value="{data_param}">
+<button type="submit">Buscar</button>
+</form>
+</div>
+
+<p style="text-align:center;font-size:16px;">📅 {data_exibicao}</p>
 
 <div class="section top-quente">
 <h2>🔥 Maiores Temperaturas do Dia</h2>
@@ -269,7 +346,7 @@ th {{ background:#eee; }}
 </div>
 
 <div class="section top-vento">
-<h2>💨 Maiores Velocidades de Vento do Dia</h2>
+<h2>💨 Maiores Velocidades de Vento</h2>
 <table>
 <tr><th>Hora</th><th>Estação</th><th>m/s</th></tr>
 {linha(Top_vento)}
@@ -287,12 +364,13 @@ th {{ background:#eee; }}
 <div class="section top-chuva">
 <h2>🌧️🌧️ Acumulados de Chuva do Dia</h2>
 <table>
-<tr><th>Estação</th><th>mm (acumulado)</th></tr>
+<tr><th>Estação</th><th>mm</th></tr>
 {linha_acumulado(top_chuva_acumulada) if top_chuva_acumulada else "<tr><td colspan='2'>Sem registros</td></tr>"}
 </table>
 </div>
 
 </div>
+
 </body>
 </html>
 """
@@ -527,7 +605,7 @@ tr:hover {{
 
 <form method="get">
 
-📅 Buscar outra data
+Busca Data
 
 <input type="date" name="data">
 
