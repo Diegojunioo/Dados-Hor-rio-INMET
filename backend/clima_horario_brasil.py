@@ -39,9 +39,9 @@ def api_clima():
 
     agora = datetime.now(timezone.utc)
 
-    # últimas 12 horas
+    # últimas 06 horas
     horarios = []
-    for i in range(12):
+    for i in range(6):
         h = agora - timedelta(hours=i)
         data = h.strftime("%Y-%m-%d")
         hora = h.strftime("%H00")
