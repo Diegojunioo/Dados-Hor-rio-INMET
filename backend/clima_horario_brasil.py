@@ -227,7 +227,7 @@ def relatorio_diario():
 
             temp_max = to_float(e.get("TEM_MAX"))
             temp_min = to_float(e.get("TEM_MIN"))
-            umidade = to_float(e.get("UMD_INS"))
+            umidade = to_float(e.get("UMD_MIN"))
             chuva = to_float(e.get("CHUVA"))
             vento = to_float(e.get("VEN_RAJ"))
 
