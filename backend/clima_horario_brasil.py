@@ -32,6 +32,89 @@ def buscar_horarios_disponiveis():
     hora_atual = int(time.strftime("%H", agora))
     return data, [f"{h:02d}00" for h in range(hora_atual + 1)]
 
+@app.route("/api/extremos/diario")
+def api_extremos_diario():
+
+    data, horarios = buscar_horarios_disponiveis()
+
+    registros_temp_max = []
+    registros_temp_min = []
+    acumulado_chuva = {}
+
+    for hora in horarios:
+        url = f"https://apitempo.inmet.gov.br/token/estacao/dados/{data}/{hora}/{TOKEN}"
+
+        try:
+            estacoes = requests.get(url, timeout=TIMEOUT).json()
+        except:
+            continue
+
+        for e in estacoes[:MAX_ESTACOES]:
+
+            nome = e.get("DC_NOME")
+            uf = e.get("UF")
+
+            if not nome or not uf:
+                continue
+
+            chave = f"{nome}/{uf}"
+
+            temp_max = to_float(e.get("TEM_MAX"))
+            temp_min = to_float(e.get("TEM_MIN"))
+            chuva = to_float(e.get("CHUVA"))
+
+            if temp_max is not None:
+                registros_temp_max.append((chave, temp_max))
+
+            if temp_min is not None:
+                registros_temp_min.append((chave, temp_min))
+
+            if chuva is not None and chuva > 0:
+                acumulado_chuva[chave] = acumulado_chuva.get(chave, 0) + chuva
+
+
+    # 🔥 máximo por estação
+    def max_por_estacao(registros):
+        d = {}
+        for chave, valor in registros:
+            if chave not in d or valor > d[chave]:
+                d[chave] = valor
+        return d
+
+    # ❄️ mínimo por estação
+    def min_por_estacao(registros):
+        d = {}
+        for chave, valor in registros:
+            if chave not in d or valor < d[chave]:
+                d[chave] = valor
+        return d
+
+
+    quentes = sorted(
+        [(k.split("/")[0], k.split("/")[1], v) for k, v in max_por_estacao(registros_temp_max).items()],
+        key=lambda x: x[2],
+        reverse=True
+    )[:5]
+
+    frias = sorted(
+        [(k.split("/")[0], k.split("/")[1], v) for k, v in min_por_estacao(registros_temp_min).items()],
+        key=lambda x: x[2]
+    )[:5]
+
+    chuva = sorted(
+        [(k.split("/")[0], k.split("/")[1], v) for k, v in acumulado_chuva.items()],
+        key=lambda x: x[2],
+        reverse=True
+    )[:5]
+
+
+    return jsonify({
+        "quentes": quentes,
+        "frias": frias,
+        "chuva": chuva,
+        "data": data
+    })
+
 
 
 @app.route("/api/clima")

@@ -288,51 +288,42 @@ function calcularAtrasoHoras(data, hora) {
 
 /* 📡 CARREGAR DADOS */
 function carregarDados() {
-  fetch(API_URL)
-    .then(r => r.json())
-    .then(payload => {
+  Promise.all([
+    fetch(API_URL).then(r => r.json()),
+    fetch("/api/extremos/diario").then(r => r.json())
+  ])
+  .then(([payload, diario]) => {
 
-      const legendaConteudo = document.getElementById("legenda-conteudo");
-      const bounds = [];
-      layerEstacoes.clearLayers();
+    const legendaConteudo = document.getElementById("legenda-conteudo");
+    const bounds = [];
+    layerEstacoes.clearLayers();
 
-      const validos = payload.dados.filter(d => typeof d.temperatura === "number");
+    const validos = payload.dados.filter(d => typeof d.temperatura === "number");
 
-// Contadores horas de atraso
-let atualizadas = 0;
-let atraso1h = 0;
-let atraso3h = 0;
-let atraso6h = 0;
+    // ⏱️ CONTADORES
+    let atualizadas = 0;
+    let atraso1h = 0;
+    let atraso3h = 0;
+    let atraso6h = 0;
 
-payload.dados.forEach(c => {
+    payload.dados.forEach(c => {
+      const atraso = calcularAtrasoHoras(c.data, c.hora);
 
-  const atraso = calcularAtrasoHoras(c.data, c.hora);
+      if (atraso == null) return;
 
-  if (atraso == null) return;
+      if (atraso <= 0) atualizadas++;
+      else if (atraso <= 1) atraso1h++;
+      else if (atraso <= 3) atraso3h++;
+      else atraso6h++;
+    });
 
-  if (atraso <= 0) {
-    atualizadas++;
-  }
-  else if (atraso <= 1) {
-    atraso1h++;
-  }
-  else if (atraso <= 3) {
-    atraso3h++;
-  }
-  else {
-    atraso6h++;
-  }
+    // 🔥 DADOS DIÁRIOS (NOVO)
+    const topQuentes = diario.quentes;
+    const topFrias   = diario.frias;
+    const topChuva   = diario.chuva;
 
-});
-
-      const topQuentes = [...validos].sort((a,b)=>b.temperatura-a.temperatura).slice(0,5);
-      const topFrias   = [...validos].sort((a,b)=>a.temperatura-b.temperatura).slice(0,5);
-      const topChuva   = payload.dados
-        .filter(d => d.precipitacao > 0)
-        .sort((a,b)=>b.precipitacao-a.precipitacao)
-        .slice(0,5);
-
-      legendaConteudo.innerHTML = `
+    // 📊 LEGENDA
+    legendaConteudo.innerHTML = `
 🕒 <b>Atualização:</b><br>
 ${formatarDataBR(payload.ultima_atualizacao)} UTC<br><br>
 
@@ -351,34 +342,37 @@ ${formatarDataBR(payload.ultima_atualizacao)} UTC<br><br>
 
 <hr>
 
-🔥 <b class="link-quente">Top 5 mais quentes horário</b><br>
-${topQuentes.map((c,i)=>`${i+1}. ${c.nome}/${c.uf} — <b>${c.temperatura}°C</b>`).join("<br>")}
+🔥 <b class="link-quente">Top 5 mais quentes</b><br>
+${topQuentes.map((c,i)=>`${i+1}. ${c[0]}/${c[1]} — <b>${c[2]}°C</b>`).join("<br>")}
+
 <br><br>
 
-❄️ <b class="link-frio">Top 5 mais frias horário</b><br>
-${topFrias.map((c,i)=>`${i+1}. ${c.nome}/${c.uf} — <b>${c.temperatura}°C</b>`).join("<br>")}
+❄️ <b class="link-frio">Top 5 mais frias</b><br>
+${topFrias.map((c,i)=>`${i+1}. ${c[0]}/${c[1]} — <b>${c[2]}°C</b>`).join("<br>")}
+
 <br><br>
 
-🌧️ <b class="link-chuva">Top 5 precipitação horário</b><br>
+🌧️ <b class="link-chuva">Top 5 chuva</b><br>
 ${topChuva.length
-  ? topChuva.map((c,i)=>`${i+1}. ${c.nome}/${c.uf} — <b>${c.precipitacao} mm</b>`).join("<br>")
+  ? topChuva.map((c,i)=>`${i+1}. ${c[0]}/${c[1]} — <b>${c[2].toFixed(1)} mm</b>`).join("<br>")
   : "Sem registros"}
 `;
 
-      payload.dados.forEach(c => {
-        if (!c.lat || !c.lon) return;
-        bounds.push([c.lat, c.lon]);
+    // 📍 MARCADORES (mantém igual)
+    payload.dados.forEach(c => {
+      if (!c.lat || !c.lon) return;
+      bounds.push([c.lat, c.lon]);
 
-        const atraso = calcularAtrasoHoras(c.data, c.hora);
+      const atraso = calcularAtrasoHoras(c.data, c.hora);
 
-        L.circleMarker([c.lat, c.lon], {
-          radius: window.innerWidth < 768 ? 8 : 6,
-          fillColor: corAtraso(atraso),
-          color: "#fff",
-          weight: 1,
-          fillOpacity: 0.9
-        })
-        .bindPopup(`
+      L.circleMarker([c.lat, c.lon], {
+        radius: window.innerWidth < 768 ? 8 : 6,
+        fillColor: corAtraso(atraso),
+        color: "#fff",
+        weight: 1,
+        fillOpacity: 0.9
+      })
+      .bindPopup(`
 
 <b>${c.nome}/${c.uf} - ${c.codigo}</b><br>
 
@@ -408,17 +402,17 @@ ${topChuva.length
    Dados Diários
 </a>
 `)
-
-        .bindTooltip(`<b>${c.nome}/${c.uf} - ${c.codigo}</b>`, { sticky: true })
-        .addTo(layerEstacoes);
-      });
-
-      if (bounds.length) map.fitBounds(bounds);
-    })
-    .catch(() => {
-      document.getElementById("legenda-conteudo").innerHTML = "❌ Erro ao conectar à API";
+      .bindTooltip(`<b>${c.nome}/${c.uf} - ${c.codigo}</b>`, { sticky: true })
+      .addTo(layerEstacoes);
     });
+
+    if (bounds.length) map.fitBounds(bounds);
+  })
+  .catch(() => {
+    document.getElementById("legenda-conteudo").innerHTML = "❌ Erro ao conectar à API";
+  });
 }
+
 
 carregarDados();
 setInterval(carregarDados, 600000);
