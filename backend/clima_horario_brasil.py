@@ -1,6 +1,8 @@
 from flask import send_from_directory, Flask, jsonify, Response, request
 from flask_cors import CORS
 import requests
+
+session = requests.Session()
 import os
 import time
 from datetime import datetime, timedelta, timezone
@@ -10,7 +12,7 @@ CORS(app)
 
 TOKEN = os.getenv("INMET_TOKEN") or "bEhBU0szRjV4TGhic2E3ZHpndEVTVENrSkN4NjJxZm0=lHASK3F5xLhbsa7dzgtESTCkJCx62qfm"
 
-TIMEOUT = 2
+TIMEOUT = 8
 MAX_ESTACOES = 1000
 
 
@@ -489,16 +491,13 @@ font-size:14px;
 @app.route("/diario/<codigo>")
 def diario_estacao(codigo):
 
-    from flask import request
-    from datetime import datetime
-
     data, _ = buscar_horarios_disponiveis()
 
     # horários fixos do dia
     horarios = [f"{h:02d}00" for h in range(24)]
 
     data_param = request.args.get("data")
-
+    
     if data_param:
         data = data_param.replace("-", "")
 
@@ -509,8 +508,14 @@ def diario_estacao(codigo):
         url = f"https://apitempo.inmet.gov.br/token/estacao/dados/{data}/{hora}/{TOKEN}"
 
         try:
-            estacoes = requests.get(url, timeout=TIMEOUT).json()
-        except:
+            resposta = requests.get(url, timeout=TIMEOUT)
+
+            print(f"{hora} -> {resposta.status_code}")
+
+            estacoes = resposta.json()
+
+        except Exception as e:
+            print(f"❌ {hora}: {e}")
             continue
 
         for e in estacoes:
